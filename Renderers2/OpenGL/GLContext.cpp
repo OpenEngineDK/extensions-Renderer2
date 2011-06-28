@@ -408,76 +408,6 @@ GLint GLContext::LoadShader(Shader* shad) {
     return shaderId;
 }
 
-void GLContext::BindUniforms(Shader* shad, GLint id) {
-    // glUseProgram(id);
-    Shader::UniformIterator it = shad->UniformsBegin();
-    for (; it != shad->UniformsEnd(); ++it) {
-        GLint loc = glGetUniformLocation(id, (*it).first.c_str());
-        Uniform& uniform = (*it).second;
-        const Uniform::Data data = uniform.GetData();
-
-        switch (uniform.GetKind()) {
-        case Uniform::INT:
-            glUniform1i(loc, data.i);
-            break;
-        case Uniform::FLOAT:
-            glUniform1f(loc, data.f);
-            break;
-        case Uniform::FLOAT3:
-            glUniform3fv(loc, 3, data.fv);
-            break;
-        case Uniform::FLOAT4:
-            glUniform4fv(loc, 4, data.fv);
-            break;
-        case Uniform::MAT3X3:
-            glUniformMatrix3fv(loc, 9, false, data.fv);
-            break;
-        case Uniform::MAT4X4:
-            glUniformMatrix4fv(loc, 16, false, data.fv);
-            break;            
-        case Uniform::UNKNOWN:
-#if OE_SAFE
-            throw Exception("Unknown uniform kind.");
-#endif
-            break;
-        }
-        CHECK_FOR_GL_ERROR();
-    }
-}
-
-void GLContext::BindAttributes(Shader* shad, GLint id) {
-    // glUseProgram(id);
-    Shader::AttributeIterator it = shad->AttributesBegin();
-
-    glEnableClientState(GL_VERTEX_ARRAY);
-    if (vboSupport) {
-        for (; it != shad->AttributesEnd(); ++it) {
-            GLint loc = glGetAttribLocation(id, (*it).first.c_str());
-            IDataBlock* db = (*it).second.get();
-            glBindBuffer(GL_ARRAY_BUFFER, LookupVBO(db));
-            glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, 0);
-            CHECK_FOR_GL_ERROR();
-        }
-    }
-    else {
-        for (; it != shad->AttributesEnd(); ++it) {
-            GLint loc = glGetAttribLocation(id, (*it).first.c_str());
-            IDataBlock* db = (*it).second.get();
-            glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, db->GetVoidData());
-            CHECK_FOR_GL_ERROR();
-        }
-    }
-}
-
-void GLContext::BindTextures2D(Shader* shad, GLint id) {
-    Shader::Texture2DIterator it = shad->Textures2DBegin();
-    GLint texUnit = GL_TEXTURE0;
-    for (; it != shad->Textures2DEnd(); ++it) {
-        GLint loc = glGetUniformLocation(id, (*it).first.c_str());
-        glUniform1i(loc, texUnit++);
-    }
-}
-
 GLint GLContext::LookupShader(Shader* shad) {
     map<Shader*, GLint>::iterator it = shaders.find(shad);
     if (it != shaders.end())
@@ -485,15 +415,6 @@ GLint GLContext::LookupShader(Shader* shad) {
     GLint id = LoadShader(shad);
     shaders[shad] = id;
     
-    // for now we simply rebind everything in each lookup
-    // todo: optimize to only rebind when needed (event driven rebinding).
-    // todo: optimize by caching locations
-    glUseProgram(id);
-    BindUniforms(shad, id);
-    BindAttributes(shad, id);
-    BindTextures2D(shad, id);
-    glUseProgram(0);
-
     return id;
 }
 

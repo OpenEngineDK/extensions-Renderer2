@@ -11,13 +11,14 @@
 
 #include <Renderers2/OpenGL/GLContext.h>
 #include <Display2/Canvas3D.h>
+#include <Resources2/Shader.h>
+#include <Resources2/PhongShader.h>
 #include <Scene/TransformationNode.h>
 #include <Scene/RenderStateNode.h>
 #include <Scene/MeshNode.h>
 #include <Geometry/GeometrySet.h>
 #include <Geometry/Mesh.h>
 #include <Geometry/Material.h>
-#include <Meta/OpenGL.h>
 #include <Logging/Logger.h>
 
 namespace OpenEngine {
@@ -27,6 +28,9 @@ namespace OpenGL {
 using namespace Math;
 using namespace Geometry;
 using namespace Scene;
+
+using Resources2::Uniform;
+using Resources2::PhongShader;
 
 /**
  * Rendering view constructor.
@@ -183,6 +187,119 @@ void RenderingView::VisitTransformationNode(TransformationNode* node) {
     CHECK_FOR_GL_ERROR();
 }
 
+void RenderingView::BindUniforms(Shader* shad, GLint id) {
+    Shader::UniformIterator it = shad->UniformsBegin();
+    for (; it != shad->UniformsEnd(); ++it) {
+        GLint loc = glGetUniformLocation(id, (*it).first.c_str());
+        Uniform& uniform = (*it).second;
+        const Uniform::Data data = uniform.GetData();
+
+        switch (uniform.GetKind()) {
+        case Uniform::INT:
+            glUniform1i(loc, data.i);
+            break;
+        case Uniform::FLOAT:
+            glUniform1f(loc, data.f);
+            break;
+        case Uniform::FLOAT3:
+            glUniform3fv(loc, 3, data.fv);
+            break;
+        case Uniform::FLOAT4:
+            glUniform4fv(loc, 4, data.fv);
+            break;
+        case Uniform::MAT3X3:
+            glUniformMatrix3fv(loc, 9, false, data.fv);
+            break;
+        case Uniform::MAT4X4:
+            glUniformMatrix4fv(loc, 16, false, data.fv);
+            break;            
+        case Uniform::UNKNOWN:
+#if OE_SAFE
+            throw Exception("Unknown uniform kind.");
+#endif
+            break;
+        }
+        CHECK_FOR_GL_ERROR();
+    }
+}
+
+void RenderingView::BindAttributes(GeometrySet* gs, Shader* shad, GLint id) {
+    // PROBLEM: we have attributes on both Mesh and Shader
+
+    Shader::AttributeIterator it = shad->AttributesBegin();
+    map<string, IDataBlockPtr>::iterator it2 = gs->GetAttributeLists().begin();
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    if (ctx->VBOSupport()) {
+        for (; it != shad->AttributesEnd(); ++it) {
+            GLint loc = glGetAttribLocation(id, it->first.c_str());
+#if OE_SAFE
+            if (loc == -1) throw Exception(string("Attribute location not found: ") + it->first);
+#endif
+            IDataBlock* db = it->second.get();
+            glBindBuffer(GL_ARRAY_BUFFER, ctx->LookupVBO(db));
+            glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, 0);
+            CHECK_FOR_GL_ERROR();
+        }
+        // for (; it2 != gs->GetAttributeLists().end(); ++it2) {
+        //     GLint loc = glGetAttribLocation(id, it2->first.c_str());
+        //     if (loc == -1) continue;
+        //     IDataBlock* db = it2->second.get();
+        //     glBindBuffer(GL_ARRAY_BUFFER, ctx->LookupVBO(db));
+        //     glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, 0);
+        //     CHECK_FOR_GL_ERROR();
+        // }
+    }
+    else {
+        for (; it != shad->AttributesEnd(); ++it) {
+            GLint loc = glGetAttribLocation(id, it->first.c_str());
+#if OE_SAFE
+            if (loc == -1) throw Exception(string("Attribute location not found: ") + it->first);
+#endif
+            IDataBlock* db = it->second.get();
+            glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, db->GetVoidData());
+            CHECK_FOR_GL_ERROR();
+        }
+        // for (; it2 != gs->GetAttributeLists().end(); ++it2) {
+        //     GLint loc = glGetAttribLocation(id, it2->first.c_str());
+        //     if (loc == -1) continue;
+        //     IDataBlock* db = it2->second.get();
+        //     glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, db->GetVoidData());
+        //     CHECK_FOR_GL_ERROR();
+        // }
+    }
+    glDisableClientState(GL_VERTEX_ARRAY);
+}
+
+void RenderingView::BindTextures2D(Material* mat, Shader* shad, GLint id) {
+    // PROBLEM: we have textures on both Material and Shader
+
+    Shader::Texture2DIterator it = shad->Textures2DBegin();
+    GLint texUnit = 0;
+    for (; it != shad->Textures2DEnd(); ++it) {
+        GLint loc = glGetUniformLocation(id, it->first.c_str());
+#if OE_SAFE
+        if (loc == -1) throw Exception(string("Uniform location not found: ") + it->first);
+#endif
+        glActiveTexture(GL_TEXTURE0 + texUnit);
+        CHECK_FOR_GL_ERROR();
+        glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(it->second.get()));
+        CHECK_FOR_GL_ERROR();
+        glUniform1i(loc, texUnit++);
+        CHECK_FOR_GL_ERROR();
+    }
+
+    // map<string, ITexture2DPtr>::iterator it2 = mat->Get2DTextures().begin();
+    // for (; it2 != mat->Get2DTextures().end(); ++it2) {
+    //     GLint loc = glGetUniformLocation(id, it2->first.c_str());
+    //     if (loc == -1) continue;
+    //     glActiveTexture(GL_TEXTURE0 + texUnit);
+    //     glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(it2->second.get()));
+    //     glUniform1i(loc, texUnit++);
+    //     CHECK_FOR_GL_ERROR();
+    // }
+}
+
 /**
  * Process a mesh node.
  *
@@ -194,18 +311,37 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
     Material* mat = mesh->GetMaterial().get();
 
     // material
-    if (renderTexture && mat->Get2DTextures().size() > 0) {
+    if (ctx->ShaderSupport() && true /* todo: check for material shader */) {
+        // for now we simply rebind everything in each lookup
+        // todo: optimize to only rebind when needed (event driven rebinding).
+        // todo: optimize by caching locations
+        map<Mesh*, Shader*>::iterator it = shaders.find(mesh);
+        Shader* shad;
+        if (it != shaders.end())
+            shad = it->second;
+        else {
+            shad = new PhongShader(mesh);
+            shaders[mesh] = shad;
+        }
+        GLuint shaderId = ctx->LookupShader(shad);
+        glUseProgram(shaderId);
+        BindUniforms(shad, shaderId);
+        BindAttributes(geom, shad, shaderId);
+        BindTextures2D(mat, shad, shaderId);
+    }
+    else if (renderTexture && mat->Get2DTextures().size() > 0) {
         glEnable(GL_TEXTURE_2D);
         ITexture2D* tex = (*mat->Get2DTextures().begin()).second.get();
+        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(tex));
         CHECK_FOR_GL_ERROR();
     }
-  
-    logger.info << "ambient: " << mat->ambient << logger.end;
-    logger.info << "diffuse: " << mat->diffuse << logger.end;
-    logger.info << "specular: " << mat->specular << logger.end;
+
+    // logger.info << "ambient: " << mat->ambient << logger.end;
+    // logger.info << "diffuse: " << mat->diffuse << logger.end;
+    // logger.info << "specular: " << mat->specular << logger.end;
     
-    mat->ambient = Vector<4,float>(1);
+    // mat->ambient = Vector<4,float>(1);
     glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,  mat->diffuse.ToArray());
     glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,  mat->ambient.ToArray());
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat->specular.ToArray());
@@ -274,11 +410,14 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
         glDrawElements(type, count, GL_UNSIGNED_INT, indices->GetData() + offset);
     }
 
+    // cleanup (is it necessary?)
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_NORMAL_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glDisable(GL_TEXTURE_2D);
+    if (ctx->ShaderSupport()) glUseProgram(0);
 
     itr = ts.begin();
     i = 0;

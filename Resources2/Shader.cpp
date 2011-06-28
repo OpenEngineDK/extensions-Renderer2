@@ -59,6 +59,9 @@ const Uniform::Data Uniform::GetData() {
     return data;
 }
 
+Shader::Shader() {
+}
+
 Shader::Shader(string vertexShader, string fragmentShader)
     : vertexShader(vertexShader)
     , fragmentShader(fragmentShader) {

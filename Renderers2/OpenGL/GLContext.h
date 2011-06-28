@@ -58,9 +58,6 @@ private:
     GLint LoadVBO(IDataBlock* db);
     GLint LoadShader(Shader* shad);
 
-    inline void BindUniforms(Shader* shad, GLint id);
-    inline void BindAttributes(Shader* shad, GLint id);
-    inline void BindTextures2D(Shader* shad, GLint id);
     inline void SetupTexParameters(ITexture2D* tex);
 public:
     GLContext();

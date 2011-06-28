@@ -80,8 +80,10 @@ private:
     map<string, Uniform> uniforms;
     map<string, IDataBlockPtr> attributes;
     map<string, ITexture2DPtr> textures;
+protected:
     string vertexShader, fragmentShader;
 public:
+    Shader();
     Shader(string vertexShader, string fragmentShader);
     virtual ~Shader();
 

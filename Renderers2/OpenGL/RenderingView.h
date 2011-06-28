@@ -13,12 +13,19 @@
 #include <Scene/ISceneNodeVisitor.h>
 #include <Core/IListener.h>
 #include <Renderers2/OpenGL/GLRenderer.h>
+#include <Meta/OpenGL.h>
+
+#include <map>
 
 namespace OpenEngine {
     // Forward declarations.
     namespace Geometry {
         class Mesh;
         class Material;
+        class GeometrySet;
+    }
+    namespace Resources2 {
+        class Shader;
     }
 
 namespace Renderers2 {
@@ -27,11 +34,13 @@ namespace OpenGL {
 using Scene::ISceneNodeVisitor;
 using Core::IListener;
 using Geometry::Mesh;
+using Geometry::GeometrySet;
 using Geometry::Material;
 using Scene::RenderStateNode;
 using Scene::TransformationNode;
 using Scene::MeshNode;
-
+using Resources2::Shader;
+using std::map;
 
 /**
  * Concrete scene traverser and rendering tool using OpenGL.
@@ -40,10 +49,17 @@ class RenderingView
     : public ISceneNodeVisitor, public IListener<RenderingEventArg> {
 private:
     GLContext* ctx;
-    RenderStateNode* currentRenderState;    
+    RenderStateNode* currentRenderState;
     // bool renderBinormal, renderTangent, renderSoftNormal, renderHardNormal;
     bool renderTexture, renderShader;
+
+    map<Mesh*, Shader*> shaders; // hack until material type is revised
+
     inline void ApplyRenderState(RenderStateNode* node);
+    inline void BindUniforms(Shader* shad, GLint id);
+    inline void BindAttributes(GeometrySet* gs, Shader* shad, GLint id);
+    inline void BindTextures2D(Material* mat, Shader* shad, GLint id);
+
 public:
     RenderingView();
     virtual ~RenderingView();
