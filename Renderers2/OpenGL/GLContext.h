@@ -19,6 +19,9 @@ namespace OpenEngine {
     namespace Resources {
         class ITexture2D;
     }
+    namespace Resources2 {
+        class Shader;
+    }
 namespace Renderers2 {
 namespace OpenGL {
 
@@ -28,6 +31,7 @@ using Resources::BlockType;
 using Resources::Types::Type;
 using Resources::UpdateMode;
 using Resources::ColorFormat;
+using Resources2::Shader;
 using std::map;
 
 /**
@@ -48,10 +52,15 @@ private:
     bool init, fboSupport, vboSupport, shaderSupport;
     map<ITexture2D*, GLint> textures;
     map<IDataBlock*, GLint> vbos;
+    map<Shader*, GLint> shaders;
 
     GLint LoadTexture(ITexture2D* tex);
     GLint LoadVBO(IDataBlock* db);
-    void SetupTexParameters(ITexture2D* tex);
+    GLint LoadShader(Shader* shad);
+
+    inline void BindUniforms(Shader* shad, GLint id);
+    inline void BindAttributes(Shader* shad, GLint id);
+    inline void SetupTexParameters(ITexture2D* tex);
 public:
     GLContext();
     virtual ~GLContext();
@@ -64,6 +73,7 @@ public:
     
     GLint LookupTexture(ITexture2D* tex);
     GLint LookupVBO(IDataBlock* db);
+    GLint LookupShader(Shader* shad);
     
     static inline GLint GLInternalColorFormat(ColorFormat f);
     static inline GLenum GLColorFormat(ColorFormat f);

@@ -19,6 +19,8 @@ namespace Renderers2 {
 namespace OpenGL {
 
 using namespace Resources;
+using Resources2::Uniform;
+using Resources2::Shader;
 
 GLContext::GLContext()
     : init(false)
@@ -190,6 +192,8 @@ GLenum GLContext::GLAccessType(BlockType b, UpdateMode u){
     return GL_STATIC_DRAW;
 }
 
+
+// ------- Texture -------
 void GLContext::SetupTexParameters(ITexture2D* tex){
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     CHECK_FOR_GL_ERROR();
@@ -270,6 +274,7 @@ GLint GLContext::LookupTexture(ITexture2D* tex) {
     return id;
 }
 
+// ------- VBO -------
 GLint GLContext::LoadVBO(IDataBlock* db) {
 #if OE_SAFE
     if (!vboSupport) throw Exception("VBOs not supported.");
@@ -304,6 +309,182 @@ GLint GLContext::LookupVBO(IDataBlock* db) {
     vbos[db] = id;
     return id;
 }
+
+
+// ------- Shader -------
+void PrintProgramInfoLog(GLuint program) {
+    GLint infologLength = 0, charsWritten = 0;
+    GLchar* infoLog;
+    glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infologLength);
+    if (infologLength > 0) {
+        infoLog = (GLchar *)malloc(infologLength);
+        if (infoLog==NULL) {
+            logger.error << "Could not allocate InfoLog buffer" << logger.end;
+            return;
+        }
+        glGetProgramInfoLog(program, infologLength, &charsWritten, infoLog);
+        logger.info << "Program InfoLog:\n \"" << infoLog << "\"" << logger.end;
+        free(infoLog);
+    }
+}
+
+GLint GLContext::LoadShader(Shader* shad) {
+#if OE_SAFE
+    if (!shaderSupport) throw Exception("Shaders not supported.");
+    if (shad == NULL) throw Exception("Cannot load NULL shader.");
+#endif
+
+    GLuint shaderId = glCreateProgram();
+    GLuint vertexId = glCreateShader(GL_VERTEX_SHADER);
+    GLuint fragmentId = glCreateShader(GL_FRAGMENT_SHADER);
+    
+#if OE_SAFE
+    if (shaderId == 0)
+        throw Exception("Failed to create shader program.");
+    if (vertexId == 0)
+        throw Exception("Failed to create vertex shader.");
+    if (fragmentId == 0)
+        throw Exception("Failed to create fragment shader.");
+#endif
+    glAttachShader(shaderId, vertexId);
+    glAttachShader(shaderId, fragmentId);
+    CHECK_FOR_GL_ERROR();
+
+    // compile vertex shader
+    const GLchar* shaderBits[1];
+    shaderBits[0] = shad->GetVertexShader().c_str();
+    glShaderSource(vertexId, 1, shaderBits, NULL);
+    glCompileShader(vertexId);
+
+#if OE_SAFE
+    GLint  compiled;
+    glGetShaderiv(vertexId, GL_COMPILE_STATUS, &compiled);
+    if (compiled == 0) {
+        GLsizei bufsize;
+        const int maxBufSize = 100;
+        char buffer[maxBufSize];
+        glGetShaderInfoLog(vertexId, maxBufSize, &bufsize, buffer);
+        logger.error << "compile errors: " << buffer << logger.end;
+        throw Exception("Failed to compile vertex shader.");
+    }
+#endif
+#if DEBUG
+    PrintShaderInfoLog(vertexId);
+#endif
+
+    // compile fragment shader
+    shaderBits[0] = shad->GetFragmentShader().c_str();
+    glShaderSource(fragmentId, 1, shaderBits, NULL);
+    glCompileShader(fragmentId);
+    glGetShaderiv(fragmentId, GL_COMPILE_STATUS, &compiled);
+#if OE_SAFE
+    glGetShaderiv(fragmentId, GL_COMPILE_STATUS, &compiled);
+    if (compiled == 0) {
+        GLsizei bufsize;
+        const int maxBufSize = 100;
+        char buffer[maxBufSize];
+        glGetShaderInfoLog(fragmentId, maxBufSize, &bufsize, buffer);
+        logger.error << "compile errors: " << buffer << logger.end;
+        throw Exception("Failed to compile fragment shader.");
+    }
+#endif
+#if DEBUG
+    PrintShaderInfoLog(fragmentId);
+#endif
+
+    // Link the program object and print out the info log
+    glLinkProgram(shaderId);
+    GLint linked;
+    glGetProgramiv(shaderId, GL_LINK_STATUS, &linked);
+#if DEBUG
+    PrintProgramInfoLog(shaderId);
+#endif
+    CHECK_FOR_GL_ERROR();
+#if OE_SAFE            
+    if(linked == 0)
+        throw Exception("Failed to link shader program");
+#endif
+
+    return shaderId;
+}
+
+void GLContext::BindUniforms(Shader* shad, GLint id) {
+    glUseProgram(id);
+    Shader::UniformIterator it = shad->UniformsBegin();
+    for (; it != shad->UniformsEnd(); ++it) {
+        GLint loc = glGetUniformLocation(id, (*it).first.c_str());
+        Uniform& uniform = (*it).second;
+        const Uniform::Data data = uniform.GetData();
+
+        switch (uniform.GetKind()) {
+        case Uniform::INT:
+            glUniform1i(loc, data.i);
+            break;
+        case Uniform::FLOAT:
+            glUniform1f(loc, data.f);
+            break;
+        case Uniform::FLOAT3:
+            glUniform3fv(loc, 3, data.fv);
+            break;
+        case Uniform::FLOAT4:
+            glUniform4fv(loc, 4, data.fv);
+            break;
+        case Uniform::MAT3X3:
+            glUniformMatrix3fv(loc, 9, false, data.fv);
+            break;
+        case Uniform::MAT4X4:
+            glUniformMatrix4fv(loc, 16, false, data.fv);
+            break;            
+        case Uniform::UNKNOWN:
+#if OE_SAFE
+            throw Exception("Unknown uniform kind.");
+#endif
+            break;
+        }
+        CHECK_FOR_GL_ERROR();
+    }
+}
+
+void GLContext::BindAttributes(Shader* shad, GLint id) {
+    glUseProgram(id);
+    Shader::AttributeIterator it = shad->AttributesBegin();
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    if (vboSupport) {
+        for (; it != shad->AttributesEnd(); ++it) {
+            GLint loc = glGetAttribLocation(id, (*it).first.c_str());
+            IDataBlock* db = (*it).second.get();
+            glBindBuffer(GL_ARRAY_BUFFER, LookupVBO(db));
+            glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, 0);
+            CHECK_FOR_GL_ERROR();
+        }
+    }
+    else {
+        for (; it != shad->AttributesEnd(); ++it) {
+            GLint loc = glGetAttribLocation(id, (*it).first.c_str());
+            IDataBlock* db = (*it).second.get();
+            glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, db->GetVoidData());
+            CHECK_FOR_GL_ERROR();
+        }
+    }
+}
+
+GLint GLContext::LookupShader(Shader* shad) {
+    map<Shader*, GLint>::iterator it = shaders.find(shad);
+    if (it != shaders.end())
+        return (*it).second;
+    GLint id = LoadShader(shad);
+    shaders[shad] = id;
+    
+    // for now we simply rebind everything in each lookup
+    // todo: optimize to only rebind when needed (event driven rebinding).
+    BindUniforms(shad, id);
+    BindAttributes(shad, id);
+    glUseProgram(0);
+
+    return id;
+}
+
 
 
 } // NS OpenGL
