@@ -83,6 +83,18 @@ void Shader::SetAttribute(string name, IDataBlockPtr attr) {
     attributes[name] = attr;
 }
 
+ITexture2DPtr Shader::GetTexture2D(string name) {
+    map<string, ITexture2DPtr>::iterator it = textures.find(name);
+    if (it != textures.end())
+        return (*it).second;
+    return ITexture2DPtr(); // hmm or raise an exception?    
+}
+
+void Shader::SetTexture2D(string name, ITexture2DPtr tex) {
+    textures[name] = tex;    
+}
+
+
 string Shader::GetVertexShader() {
     return vertexShader;
 }
@@ -105,6 +117,14 @@ Shader::AttributeIterator Shader::AttributesBegin() {
 
 Shader::AttributeIterator Shader::AttributesEnd() {
     return attributes.end();
+}
+
+Shader::Texture2DIterator Shader::Textures2DBegin() {
+    return textures.begin();
+}
+
+Shader::Texture2DIterator Shader::Textures2DEnd() {
+    return textures.end();
 }
 
 

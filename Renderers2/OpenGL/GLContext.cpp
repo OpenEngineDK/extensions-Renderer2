@@ -409,7 +409,7 @@ GLint GLContext::LoadShader(Shader* shad) {
 }
 
 void GLContext::BindUniforms(Shader* shad, GLint id) {
-    glUseProgram(id);
+    // glUseProgram(id);
     Shader::UniformIterator it = shad->UniformsBegin();
     for (; it != shad->UniformsEnd(); ++it) {
         GLint loc = glGetUniformLocation(id, (*it).first.c_str());
@@ -446,7 +446,7 @@ void GLContext::BindUniforms(Shader* shad, GLint id) {
 }
 
 void GLContext::BindAttributes(Shader* shad, GLint id) {
-    glUseProgram(id);
+    // glUseProgram(id);
     Shader::AttributeIterator it = shad->AttributesBegin();
 
     glEnableClientState(GL_VERTEX_ARRAY);
@@ -469,6 +469,15 @@ void GLContext::BindAttributes(Shader* shad, GLint id) {
     }
 }
 
+void GLContext::BindTextures2D(Shader* shad, GLint id) {
+    Shader::Texture2DIterator it = shad->Textures2DBegin();
+    GLint texUnit = GL_TEXTURE0;
+    for (; it != shad->Textures2DEnd(); ++it) {
+        GLint loc = glGetUniformLocation(id, (*it).first.c_str());
+        glUniform1i(loc, texUnit++);
+    }
+}
+
 GLint GLContext::LookupShader(Shader* shad) {
     map<Shader*, GLint>::iterator it = shaders.find(shad);
     if (it != shaders.end())
@@ -478,8 +487,11 @@ GLint GLContext::LookupShader(Shader* shad) {
     
     // for now we simply rebind everything in each lookup
     // todo: optimize to only rebind when needed (event driven rebinding).
+    // todo: optimize by caching locations
+    glUseProgram(id);
     BindUniforms(shad, id);
     BindAttributes(shad, id);
+    BindTextures2D(shad, id);
     glUseProgram(0);
 
     return id;
