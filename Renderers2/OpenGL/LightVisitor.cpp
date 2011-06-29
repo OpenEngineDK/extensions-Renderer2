@@ -126,12 +126,12 @@ void LightVisitor::VisitSpotLightNode(SpotLightNode* node) {
 
 void LightVisitor::Handle(RenderingEventArg arg) {
     #if OE_SAFE
-    if (arg.canvas.GetScene() == NULL)
+    if (arg.canvas->GetScene() == NULL)
         throw new Exception("Scene was NULL in LightVisitor.");
     #endif
     count = 0;
     glMatrixMode(GL_MODELVIEW);
-    arg.canvas.GetScene()->Accept(*this);
+    arg.canvas->GetScene()->Accept(*this);
     GLint max;
     glGetIntegerv(GL_MAX_LIGHTS, &max);
     for (int i = count; i < max; ++i) {

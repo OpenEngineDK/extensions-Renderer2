@@ -64,7 +64,7 @@ void GLRenderer::RenderScene(Canvas3D* canvas, Time start, unsigned int approx) 
     CHECK_FOR_GL_ERROR();
 
     // run the processing phases
-    RenderingEventArg rarg(*canvas, *this, start, approx);
+    RenderingEventArg rarg(canvas, *this, start, approx);
     this->preProcess.Notify(rarg);
     // this->stage = RENDERER_PROCESS;
     this->process.Notify(rarg);
@@ -89,7 +89,7 @@ void GLRenderer::Handle(Core::InitializeEventArg arg) {
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
 
     // this->stage = RENDERER_INITIALIZE;
-    this->initialize.Notify(RenderingEventArg(*canvas, *this));
+    this->initialize.Notify(RenderingEventArg(canvas, *this));
     //this->stage = RENDERER_PREPROCESS;
     CHECK_FOR_GL_ERROR();
     init = true;

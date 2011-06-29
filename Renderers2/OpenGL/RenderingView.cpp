@@ -56,13 +56,13 @@ RenderingView::~RenderingView() {}
 
 void RenderingView::Handle(RenderingEventArg arg) {
 #if OE_SAFE
-    if (arg.canvas.GetScene() == NULL) 
+    if (arg.canvas->GetScene() == NULL) 
         throw Exception("Scene was NULL while rendering.");
 #endif
     ctx = arg.renderer.GetContext();
     // setup default render state
     ApplyRenderState(currentRenderState);
-    arg.canvas.GetScene()->Accept(*this);
+    arg.canvas->GetScene()->Accept(*this);
     ctx = NULL;
 }
             

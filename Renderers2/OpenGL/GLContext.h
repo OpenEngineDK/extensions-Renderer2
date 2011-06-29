@@ -22,6 +22,9 @@ namespace OpenEngine {
     namespace Resources2 {
         class Shader;
     }
+    namespace Display2 {
+        class ICanvas;
+    }
 namespace Renderers2 {
 namespace OpenGL {
 
@@ -32,6 +35,7 @@ using Resources::Types::Type;
 using Resources::UpdateMode;
 using Resources::ColorFormat;
 using Resources2::Shader;
+using Display2::ICanvas;
 using std::map;
 
 /**
@@ -50,10 +54,12 @@ class GLContext {
 private:
     GLSLVersion glslversion;
     bool init, fboSupport, vboSupport, shaderSupport;
+    map<ICanvas*, GLint> canvases;
     map<ITexture2D*, GLint> textures;
     map<IDataBlock*, GLint> vbos;
     map<Shader*, GLint> shaders;
 
+    GLint LoadCanvas(ICanvas* can);
     GLint LoadTexture(ITexture2D* tex);
     GLint LoadVBO(IDataBlock* db);
     GLint LoadShader(Shader* shad);
@@ -69,6 +75,7 @@ public:
     bool VBOSupport();
     bool ShaderSupport();
     
+    GLint LookupCanvas(ICanvas* can);
     GLint LookupTexture(ITexture2D* tex);
     GLint LookupVBO(IDataBlock* db);
     GLint LookupShader(Shader* shad);

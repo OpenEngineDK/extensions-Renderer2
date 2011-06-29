@@ -11,6 +11,7 @@
 #include <Resources/ITexture2D.h>
 
 #include <Resources2/Shader.h>
+#include <Display2/ICanvas.h>
 
 #include <Logging/Logger.h>
 
@@ -21,6 +22,7 @@ namespace OpenGL {
 using namespace Resources;
 using Resources2::Uniform;
 using Resources2::Shader;
+using Display2::ICanvas;
 
 GLContext::GLContext()
     : init(false)
@@ -192,6 +194,40 @@ GLenum GLContext::GLAccessType(BlockType b, UpdateMode u){
     return GL_STATIC_DRAW;
 }
 
+// ------- Canvas -------
+
+GLint GLContext::LoadCanvas(ICanvas* can) {
+#if OE_SAFE
+    if (can == NULL) throw Exception("Cannot load NULL canvas.");
+#endif
+    GLuint texid; 
+    glGenTextures(1, &texid);
+    CHECK_FOR_GL_ERROR();
+
+    glBindTexture(GL_TEXTURE_2D, texid);
+    CHECK_FOR_GL_ERROR();
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+                 can->GetWidth(), can->GetHeight(), 0, GL_RGB, 
+                 GL_UNSIGNED_BYTE, NULL);
+    CHECK_FOR_GL_ERROR();
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return texid;
+}
+
+GLint GLContext::LookupCanvas(ICanvas* can) {
+    map<ICanvas*, GLint>::iterator it = canvases.find(can);
+    if (it != canvases.end())
+        return it->second;
+    GLint id = LoadCanvas(can);
+    canvases[can] = id;
+    return id;
+}
 
 // ------- Texture -------
 void GLContext::SetupTexParameters(ITexture2D* tex){
@@ -361,7 +397,7 @@ GLint GLContext::LoadShader(Shader* shad) {
     glGetShaderiv(vertexId, GL_COMPILE_STATUS, &compiled);
     if (compiled == GL_FALSE) {
         GLsizei bufsize;
-        const int maxBufSize = 256;
+        const int maxBufSize = 1024;
         char buffer[maxBufSize];
         glGetShaderInfoLog(vertexId, maxBufSize, &bufsize, buffer);
         logger.error << "compile errors: " << buffer << logger.end;
@@ -381,7 +417,7 @@ GLint GLContext::LoadShader(Shader* shad) {
     glGetShaderiv(fragmentId, GL_COMPILE_STATUS, &compiled);
     if (compiled == GL_FALSE) {
         GLsizei bufsize;
-        const int maxBufSize = 100;
+        const int maxBufSize = 1024;
         char buffer[maxBufSize];
         glGetShaderInfoLog(fragmentId, maxBufSize, &bufsize, buffer);
         logger.error << "compile errors: " << buffer << logger.end;

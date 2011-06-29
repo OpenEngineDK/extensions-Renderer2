@@ -40,11 +40,11 @@ class LightVisitor;
 
 class RenderingEventArg {
 public:
-    Canvas3D& canvas;
+    Canvas3D* canvas;
     GLRenderer& renderer;
     Time time;
     unsigned int approx;
-    RenderingEventArg(Canvas3D& canvas, GLRenderer& renderer, Time time = Time(), unsigned int approx = 0)
+    RenderingEventArg(Canvas3D* canvas, GLRenderer& renderer, Time time = Time(), unsigned int approx = 0)
         : canvas(canvas), renderer(renderer), time(time), approx(approx) {}
 };
 
