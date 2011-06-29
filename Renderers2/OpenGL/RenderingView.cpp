@@ -311,7 +311,7 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
     Material* mat = mesh->GetMaterial().get();
 
     // material
-    if (ctx->ShaderSupport() && true /* todo: check for material shader */) {
+    if (renderShader && ctx->ShaderSupport() && true /* todo: check for material shader */) {
         // for now we simply rebind everything in each lookup
         // todo: optimize to only rebind when needed (event driven rebinding).
         // todo: optimize by caching locations

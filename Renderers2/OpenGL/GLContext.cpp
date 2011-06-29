@@ -359,9 +359,9 @@ GLint GLContext::LoadShader(Shader* shad) {
 #if OE_SAFE
     GLint  compiled;
     glGetShaderiv(vertexId, GL_COMPILE_STATUS, &compiled);
-    if (compiled == 0) {
+    if (compiled == GL_FALSE) {
         GLsizei bufsize;
-        const int maxBufSize = 100;
+        const int maxBufSize = 256;
         char buffer[maxBufSize];
         glGetShaderInfoLog(vertexId, maxBufSize, &bufsize, buffer);
         logger.error << "compile errors: " << buffer << logger.end;
@@ -379,7 +379,7 @@ GLint GLContext::LoadShader(Shader* shad) {
     glGetShaderiv(fragmentId, GL_COMPILE_STATUS, &compiled);
 #if OE_SAFE
     glGetShaderiv(fragmentId, GL_COMPILE_STATUS, &compiled);
-    if (compiled == 0) {
+    if (compiled == GL_FALSE) {
         GLsizei bufsize;
         const int maxBufSize = 100;
         char buffer[maxBufSize];
@@ -401,10 +401,9 @@ GLint GLContext::LoadShader(Shader* shad) {
 #endif
     CHECK_FOR_GL_ERROR();
 #if OE_SAFE            
-    if(linked == 0)
+    if(linked == GL_FALSE)
         throw Exception("Failed to link shader program");
 #endif
-
     return shaderId;
 }
 

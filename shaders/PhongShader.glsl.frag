@@ -16,19 +16,18 @@ void main (void)
     
     vec4 color = 
         gl_LightModel.ambient * 
+#ifdef AMBIENT_MAP
+        texture2D(ambientMap, gl_TexCoord[0].st);
+#else
         gl_FrontMaterial.ambient;
+#endif
 
 #ifdef OPACITY_MAP  
 #ifdef OPACITY_INDEX
-    color.a = texture2D(opacityMap, gl_TexCoord[OPACITY_INDEX].st).r;
-
-    // weird hack ... should be if (color.a == 0.0)
-    if (color.a < .9) 
+    if (texture2D(opacityMap, gl_TexCoord[OPACITY_INDEX].st).a < .5) 
         discard;
 #endif
 #endif 
-
-
 
     for (int i = 0; i < NUM_LIGHTS; ++i) {
         float att = 1.0;
@@ -42,10 +41,11 @@ void main (void)
         color +=
 #ifdef AMBIENT_MAP
             texture2D(ambientMap, gl_TexCoord[0].st) *
+#else
+            gl_FrontMaterial.ambient *
 #endif
-            gl_LightSource[i].ambient *
-            gl_FrontMaterial.ambient;
-        
+            gl_LightSource[i].ambient;
+
         vec3 l = normalize(lightDir[i]);
         vec3 e = normalize(eyeVec);
 
@@ -55,10 +55,14 @@ void main (void)
                 color +=
                     att *
                     gl_LightSource[i].diffuse *
+
+#ifdef DIFFUSE_MAP
+                    texture2D(diffuseMap, gl_TexCoord[0].st) *
+#else
                     gl_FrontMaterial.diffuse *
-                    //texture2D(diffuseMap, gl_TexCoord[0].st) *
+#endif
                     lambertTerm;
-              
+                
                 vec3 r = reflect(-l, n);
                 float specular = pow(max(dot(r, e), 0.0),
                                      gl_FrontMaterial.shininess);
@@ -67,8 +71,9 @@ void main (void)
                     gl_LightSource[i].specular *
 #ifdef SPECULAR_MAP
                     texture2D(specularMap, gl_TexCoord[0].st) *
-#endif
+#else
                     gl_FrontMaterial.specular *
+#endif
                     specular;
             }
     }

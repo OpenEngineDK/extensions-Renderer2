@@ -85,6 +85,8 @@ void GLRenderer::Handle(Core::InitializeEventArg arg) {
     CHECK_FOR_GL_ERROR();
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     CHECK_FOR_GL_ERROR();
+    GLfloat global_ambient[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
 
     // this->stage = RENDERER_INITIALIZE;
     this->initialize.Notify(RenderingEventArg(*canvas, *this));

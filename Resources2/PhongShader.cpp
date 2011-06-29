@@ -54,8 +54,8 @@ PhongShader::PhongShader(Mesh* mesh) {
         bump = mat->Get2DTextures()["height"];
     if (bump && bump->GetChannels() < 3) bump.reset();
 
-    const string vertexFile = DirectoryManager::FindFileInPath("extensions/OpenGLRenderer/shaders/PhongShader.glsl.vert");
-    const string fragmentFile = DirectoryManager::FindFileInPath("extensions/OpenGLRenderer/shaders/PhongShader.glsl.frag");
+    const string vertexFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShader.glsl.vert");
+    const string fragmentFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShader.glsl.frag");
 
     int sz = File::GetSize(vertexFile);
     char* buf = new char[sz];
@@ -119,8 +119,8 @@ PhongShader::PhongShader(Mesh* mesh) {
         SetAttribute("bitangent", bitans);
     }
 
-    logger.info << vertexShader << logger.end;
-    logger.info << fragmentShader << logger.end;
+    // logger.info << vertexShader << logger.end;
+    // logger.info << fragmentShader << logger.end;
 }
 
 PhongShader::~PhongShader() {
