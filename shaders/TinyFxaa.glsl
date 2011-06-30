@@ -539,7 +539,7 @@ via anisotropic filtering with specified texture gradients.
     float2 posP = posN;
     float2 offNP = horzSpan ? 
         FxaaFloat2(rcpFrame.x, 0.0) :
-        FxaaFloat2(0.0f, rcpFrame.y); 
+        FxaaFloat2(0.0, rcpFrame.y); 
     float lumaEndN = lumaN;
     float lumaEndP = lumaN;
     bool doneN = false;
@@ -788,14 +788,7 @@ Position on span is used to compute sub-pixel filter offset using simple ramp,
     uniform vec2 rcpFrame;
     noperspective varying vec2 pos;
 void main() { 
-    mat3 m = {0.4124, 0.3576, 0.1805, 
-              0.2126, 0.7152, 0.0722,
-              0.0193, 0.1192, 0.9505};
-
-    mat3 m2 = {0.4124, 0.2126, 0.0193,
-               0.3576, 0.7152, 0.1192,
-               0.1805, 0.0722, 0.9505};
-gl_FragColor.xyz = FxaaPixelShader(pos, texA, rcpFrame);}
+     gl_FragColor.xyz = FxaaPixelShader(pos, texA, rcpFrame);}
 #endif
 
 
