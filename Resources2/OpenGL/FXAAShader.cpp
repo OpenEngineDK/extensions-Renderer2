@@ -25,7 +25,9 @@ using Resources::DirectoryManager;
 
 using namespace Renderers2::OpenGL;
 
-FXAAShader::FXAAShader() {
+FXAAShader::FXAAShader()
+    : active(true)
+{
 
     indices[0] = 0;
     indices[1] = 1;
@@ -68,6 +70,11 @@ FXAAShader::~FXAAShader() {
 }
 
 void FXAAShader::Handle(RenderingEventArg arg) {
+    if (!active) return;
+
+    // this is a hack! Module should not be added in the first place if shader is not supported.
+    if (!arg.renderer.GetContext()->ShaderSupport()) return; 
+
     GLint shaderId = arg.renderer.GetContext()->LookupShader(this);
     GLint screenId = arg.renderer.GetContext()->LookupCanvas(arg.canvas);
 
@@ -113,6 +120,14 @@ void FXAAShader::Handle(RenderingEventArg arg) {
 
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glEnable(GL_DEPTH_TEST);
+}
+
+void FXAAShader::SetActive(bool active) {
+    this->active = active;
+}
+
+bool FXAAShader::GetActive() {
+    return active;
 }
 
 }

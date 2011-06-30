@@ -25,11 +25,15 @@ class FXAAShader: public Shader, public IListener<RenderingEventArg> {
 private:
     float vertices[4*2]; // 4 2-vectors
     unsigned char indices[4]; // 4 index values
+    bool active;
 public:
     FXAAShader();
     virtual ~FXAAShader();
 
     void Handle(RenderingEventArg arg);
+
+    void SetActive(bool active);
+    bool GetActive();
 };
 
 }
