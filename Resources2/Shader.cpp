@@ -55,7 +55,7 @@ Uniform::Kind Uniform::GetKind() {
     return kind;
 }
     
-const Uniform::Data Uniform::GetData() {
+Uniform::Data Uniform::GetData() {
     return data;
 }
 
@@ -86,6 +86,12 @@ void Shader::SetAttribute(string name, IDataBlockPtr attr) {
     attributes[name] = attr;
 }
 
+void Shader::UnsetAttribute(string name) {
+    map<string,IDataBlockPtr>::iterator it = attributes.find(name);
+    if (it != attributes.end())
+        attributes.erase(it);
+}
+
 ITexture2DPtr Shader::GetTexture2D(string name) {
     map<string, ITexture2DPtr>::iterator it = textures.find(name);
     if (it != textures.end())
@@ -96,7 +102,6 @@ ITexture2DPtr Shader::GetTexture2D(string name) {
 void Shader::SetTexture2D(string name, ITexture2DPtr tex) {
     textures[name] = tex;    
 }
-
 
 string Shader::GetVertexShader() {
     return vertexShader;

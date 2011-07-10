@@ -11,6 +11,7 @@
 
 #include <Renderers2/OpenGL/GLContext.h>
 #include <Display2/Canvas3D.h>
+#include <Display/IViewingVolume.h>
 #include <Resources2/Shader.h>
 #include <Resources2/PhongShader.h>
 #include <Scene/TransformationNode.h>
@@ -20,6 +21,7 @@
 #include <Geometry/Mesh.h>
 #include <Geometry/Material.h>
 #include <Logging/Logger.h>
+
 
 namespace OpenEngine {
 namespace Renderers2 {
@@ -59,6 +61,14 @@ void RenderingView::Handle(RenderingEventArg arg) {
     if (arg.canvas->GetScene() == NULL) 
         throw Exception("Scene was NULL while rendering.");
 #endif
+
+    map<Mesh*, PhongShader*>::iterator itr = shaders.begin();
+    for (; itr != shaders.end(); ++itr) {
+        itr->second->SetLight(light, Vector<4,float>(0.5, 0.5, 0.5, 1.0));
+    }
+
+    modelViewMatrix = arg.canvas->GetViewingVolume()->GetViewMatrix();
+    projectionMatrix = arg.canvas->GetViewingVolume()->GetProjectionMatrix();
     ctx = arg.renderer.GetContext();
     // setup default render state
     ApplyRenderState(currentRenderState);
@@ -175,7 +185,11 @@ void RenderingView::VisitRenderStateNode(Scene::RenderStateNode* node) {
  * @param node Transformation node to apply.
  */
 void RenderingView::VisitTransformationNode(TransformationNode* node) {
+
     Matrix<4,4,float> m = node->GetTransformationMatrix();
+    Matrix<4,4,float> oldMv = modelViewMatrix;
+    modelViewMatrix = m * modelViewMatrix;
+
     float f[16];
     m.ToArray(f);
     glPushMatrix();
@@ -185,33 +199,39 @@ void RenderingView::VisitTransformationNode(TransformationNode* node) {
     CHECK_FOR_GL_ERROR();
     glPopMatrix();
     CHECK_FOR_GL_ERROR();
+
+    modelViewMatrix = oldMv;
 }
 
 void RenderingView::BindUniforms(Shader* shad, GLint id) {
     Shader::UniformIterator it = shad->UniformsBegin();
     for (; it != shad->UniformsEnd(); ++it) {
         GLint loc = glGetUniformLocation(id, (*it).first.c_str());
+// #if OE_SAFE
+//         if (loc == -1) throw Exception(string("Uniform location not found: ") + it->first);
+// #endif
+        // if (loc == -1) logger.warning << string("Uniform location not found: ") + it->first << logger.end;
+        if (loc == -1) continue;
         Uniform& uniform = (*it).second;
         const Uniform::Data data = uniform.GetData();
-
         switch (uniform.GetKind()) {
         case Uniform::INT:
-            glUniform1i(loc, data.i);
+            glUniform1iv(loc, 1, &data.i);
             break;
         case Uniform::FLOAT:
-            glUniform1f(loc, data.f);
+            glUniform1fv(loc, 1, &data.f);
             break;
         case Uniform::FLOAT3:
-            glUniform3fv(loc, 3, data.fv);
+            glUniform3fv(loc, 1, data.fv);
             break;
         case Uniform::FLOAT4:
-            glUniform4fv(loc, 4, data.fv);
+            glUniform4fv(loc, 1, data.fv);
             break;
         case Uniform::MAT3X3:
-            glUniformMatrix3fv(loc, 9, false, data.fv);
+            glUniformMatrix3fv(loc, 1, false, data.fv);
             break;
         case Uniform::MAT4X4:
-            glUniformMatrix4fv(loc, 16, false, data.fv);
+            glUniformMatrix4fv(loc, 1, false, data.fv);
             break;            
         case Uniform::UNKNOWN:
 #if OE_SAFE
@@ -223,64 +243,46 @@ void RenderingView::BindUniforms(Shader* shad, GLint id) {
     }
 }
 
-void RenderingView::BindAttributes(GeometrySet* gs, Shader* shad, GLint id) {
-    // PROBLEM: we have attributes on both Mesh and Shader
-
+void RenderingView::BindAttributes(Shader* shad, GLint id) {
     Shader::AttributeIterator it = shad->AttributesBegin();
-    map<string, IDataBlockPtr>::iterator it2 = gs->GetAttributeLists().begin();
 
-    glEnableClientState(GL_VERTEX_ARRAY);
     if (ctx->VBOSupport()) {
         for (; it != shad->AttributesEnd(); ++it) {
             GLint loc = glGetAttribLocation(id, it->first.c_str());
-#if OE_SAFE
-            if (loc == -1) throw Exception(string("Attribute location not found: ") + it->first);
-#endif
+            if (loc == -1) continue;
+// #if OE_SAFE
+//             if (loc == -1) throw Exception(string("Attribute location not found: ") + it->first);
+// #endif
             IDataBlock* db = it->second.get();
             glBindBuffer(GL_ARRAY_BUFFER, ctx->LookupVBO(db));
+            glEnableVertexAttribArray(loc);
             glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, 0);
             CHECK_FOR_GL_ERROR();
         }
-        // for (; it2 != gs->GetAttributeLists().end(); ++it2) {
-        //     GLint loc = glGetAttribLocation(id, it2->first.c_str());
-        //     if (loc == -1) continue;
-        //     IDataBlock* db = it2->second.get();
-        //     glBindBuffer(GL_ARRAY_BUFFER, ctx->LookupVBO(db));
-        //     glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, 0);
-        //     CHECK_FOR_GL_ERROR();
-        // }
     }
     else {
         for (; it != shad->AttributesEnd(); ++it) {
             GLint loc = glGetAttribLocation(id, it->first.c_str());
-#if OE_SAFE
-            if (loc == -1) throw Exception(string("Attribute location not found: ") + it->first);
-#endif
+            if (loc == -1) continue;
+// #if OE_SAFE
+//             if (loc == -1) throw Exception(string("Attribute location not found: ") + it->first);
+// #endif
             IDataBlock* db = it->second.get();
             glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, db->GetVoidData());
             CHECK_FOR_GL_ERROR();
         }
-        // for (; it2 != gs->GetAttributeLists().end(); ++it2) {
-        //     GLint loc = glGetAttribLocation(id, it2->first.c_str());
-        //     if (loc == -1) continue;
-        //     IDataBlock* db = it2->second.get();
-        //     glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, db->GetVoidData());
-        //     CHECK_FOR_GL_ERROR();
-        // }
     }
-    glDisableClientState(GL_VERTEX_ARRAY);
 }
 
-void RenderingView::BindTextures2D(Material* mat, Shader* shad, GLint id) {
-    // PROBLEM: we have textures on both Material and Shader
-
+void RenderingView::BindTextures2D(Shader* shad, GLint id) {
     Shader::Texture2DIterator it = shad->Textures2DBegin();
     GLint texUnit = 0;
     for (; it != shad->Textures2DEnd(); ++it) {
         GLint loc = glGetUniformLocation(id, it->first.c_str());
-#if OE_SAFE
-        if (loc == -1) throw Exception(string("Uniform location not found: ") + it->first);
-#endif
+        if (loc == -1) continue;
+// #if OE_SAFE
+//         if (loc == -1) throw Exception(string("Uniform location not found: ") + it->first);
+// #endif
         glActiveTexture(GL_TEXTURE0 + texUnit);
         CHECK_FOR_GL_ERROR();
         glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(it->second.get()));
@@ -288,16 +290,6 @@ void RenderingView::BindTextures2D(Material* mat, Shader* shad, GLint id) {
         glUniform1i(loc, texUnit++);
         CHECK_FOR_GL_ERROR();
     }
-
-    // map<string, ITexture2DPtr>::iterator it2 = mat->Get2DTextures().begin();
-    // for (; it2 != mat->Get2DTextures().end(); ++it2) {
-    //     GLint loc = glGetUniformLocation(id, it2->first.c_str());
-    //     if (loc == -1) continue;
-    //     glActiveTexture(GL_TEXTURE0 + texUnit);
-    //     glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(it2->second.get()));
-    //     glUniform1i(loc, texUnit++);
-    //     CHECK_FOR_GL_ERROR();
-    // }
 }
 
 /**
@@ -310,26 +302,49 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
     GeometrySet* geom = mesh->GetGeometrySet().get();
     Material* mat = mesh->GetMaterial().get();
 
+    // index buffer
+    Indices* indices = mesh->GetIndices().get();
+    GLsizei count = mesh->GetDrawingRange();
+    GLsizei offset = mesh->GetIndexOffset();
+    Geometry::Type type = mesh->GetType();
+
     // material
-    if (renderShader && ctx->ShaderSupport() && true /* todo: check for material shader */) {
+    if (renderShader && ctx->ShaderSupport() && true /* todo: check for material shader */) {        
         // for now we simply rebind everything in each lookup
         // todo: optimize to only rebind when needed (event driven rebinding).
         // todo: optimize by caching locations
-        map<Mesh*, Shader*>::iterator it = shaders.find(mesh);
-        Shader* shad;
+        map<Mesh*, PhongShader*>::iterator it = shaders.find(mesh);
+        PhongShader* shad;
         if (it != shaders.end())
             shad = it->second;
         else {
             shad = new PhongShader(mesh);
             shaders[mesh] = shad;
         }
+        shad->SetModelViewMatrix(modelViewMatrix);
+        shad->SetModelViewProjectionMatrix(modelViewMatrix * projectionMatrix);
+
         GLuint shaderId = ctx->LookupShader(shad);
         glUseProgram(shaderId);
         BindUniforms(shad, shaderId);
-        BindAttributes(geom, shad, shaderId);
-        BindTextures2D(mat, shad, shaderId);
+        BindAttributes(shad, shaderId);
+        BindTextures2D(shad, shaderId);
+
+        if (ctx->VBOSupport()) {
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ctx->LookupVBO(indices));
+            glDrawElements(type, count, GL_UNSIGNED_INT, (GLvoid*)(offset * sizeof(GLuint)));
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        }
+        else {
+            glDrawElements(type, count, GL_UNSIGNED_INT, indices->GetData() + offset);
+        }
+        glUseProgram(0);
+        node->VisitSubNodes(*this);
+        return; // no fixed function stuff if shader is supported!
     }
-    else if (renderTexture && mat->Get2DTextures().size() > 0) {
+    
+    // Fixed function stuff from here on (remove code for ES support)
+    if (renderTexture && mat->Get2DTextures().size() > 0) {
         glEnable(GL_TEXTURE_2D);
         ITexture2D* tex = (*mat->Get2DTextures().begin()).second.get();
         glActiveTexture(GL_TEXTURE0);
@@ -341,7 +356,6 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
     // logger.info << "diffuse: " << mat->diffuse << logger.end;
     // logger.info << "specular: " << mat->specular << logger.end;
     
-    // mat->ambient = Vector<4,float>(1);
     glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,  mat->diffuse.ToArray());
     glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,  mat->ambient.ToArray());
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat->specular.ToArray());
@@ -350,11 +364,6 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
     CHECK_FOR_GL_ERROR();
     
     // Apply the index buffer and draw
-    Indices* indices = mesh->GetIndices().get();
-    GLsizei count = mesh->GetDrawingRange();
-    GLsizei offset = mesh->GetIndexOffset();
-    Geometry::Type type = mesh->GetType();
-
     IDataBlock* v     = geom->GetVertices().get();
     IDataBlock* n     = geom->GetNormals().get();
     IDataBlock* c     = geom->GetColors().get();
@@ -417,7 +426,6 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glDisable(GL_TEXTURE_2D);
-    if (ctx->ShaderSupport()) glUseProgram(0);
 
     itr = ts.begin();
     i = 0;

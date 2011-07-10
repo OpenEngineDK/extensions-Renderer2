@@ -29,11 +29,6 @@ FXAAShader::FXAAShader()
     : active(true)
 {
 
-    indices[0] = 0;
-    indices[1] = 1;
-    indices[2] = 2;
-    indices[3] = 3;
-
     vertices[0] = -1.0;
     vertices[1] = 1.0;
 
@@ -78,7 +73,6 @@ void FXAAShader::Handle(RenderingEventArg arg) {
     GLint shaderId = arg.renderer.GetContext()->LookupShader(this);
     GLint screenId = arg.renderer.GetContext()->LookupCanvas(arg.canvas);
 
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glDisable(GL_DEPTH_TEST);
 
     glUseProgram(shaderId);
@@ -107,18 +101,17 @@ void FXAAShader::Handle(RenderingEventArg arg) {
 #if OE_SAFE
     if (loc == -1) throw Exception(string("Attribute location not found: inA"));
 #endif
-    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableVertexAttribArray(loc);
     glVertexAttribPointer(loc, 2, GL_FLOAT, 0, 0, vertices);
     CHECK_FOR_GL_ERROR();
 
-    glVertexPointer(2, GL_FLOAT, 0, vertices);
-    glDrawElements(GL_QUADS, 4, GL_UNSIGNED_BYTE, indices);
+    glDrawArrays(GL_QUADS, 0, 4);
     CHECK_FOR_GL_ERROR();
 
+    glDisableVertexAttribArray(loc);
     glBindTexture(GL_TEXTURE_2D, 0);
     glUseProgram(0);
 
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glEnable(GL_DEPTH_TEST);
 }
 

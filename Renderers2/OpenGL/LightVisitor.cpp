@@ -9,6 +9,7 @@
 
 #include <Renderers2/OpenGL/LightVisitor.h>
 #include <Display2/Canvas3D.h>
+#include <Display/IViewingVolume.h>
 #include <Scene/TransformationNode.h>
 #include <Scene/DirectionalLightNode.h>
 #include <Scene/PointLightNode.h>
@@ -40,6 +41,9 @@ LightVisitor::~LightVisitor() {}
         
 void LightVisitor::VisitTransformationNode(TransformationNode* node) {
     Matrix<4,4,float> m = node->GetTransformationMatrix();
+    Matrix<4,4,float> oldMv = modelViewMatrix;
+    modelViewMatrix = m * modelViewMatrix;
+
     float f[16];
     m.ToArray(f);
     glPushMatrix();
@@ -47,6 +51,8 @@ void LightVisitor::VisitTransformationNode(TransformationNode* node) {
     node->VisitSubNodes(*this);
     glPopMatrix();
     CHECK_FOR_GL_ERROR();
+
+    modelViewMatrix = oldMv;
 }
     
 void LightVisitor::VisitDirectionalLightNode(DirectionalLightNode* node) {
@@ -66,6 +72,14 @@ void LightVisitor::VisitDirectionalLightNode(DirectionalLightNode* node) {
     node->specular.ToArray(color);
     glLightfv(light, GL_SPECULAR, color);
     glEnable(light);
+    
+    LightSource l;
+    l.position = (modelViewMatrix.GetTranspose() * Vector<4,float>(0.0, -1.0, 0.0, 0.0)).GetNormalize();        
+    l.ambient = node->ambient;
+    l.diffuse = node->diffuse;
+    l.specular = node->specular;
+    lights.insert(lights.end(), l);
+
     count++;
     CHECK_FOR_GL_ERROR();
     node->VisitSubNodes(*this);            
@@ -91,9 +105,21 @@ void LightVisitor::VisitPointLightNode(PointLightNode* node) {
     glLightf(light, GL_LINEAR_ATTENUATION, node->linearAtt);
     glLightf(light, GL_QUADRATIC_ATTENUATION, node->quadAtt);
     glEnable(light);
+
+    LightSource l;
+    l.position = (modelViewMatrix.GetTranspose() * Vector<4,float>(0.0, 0.0, 0.0, 1.0));
+    l.ambient = node->ambient;
+    l.diffuse = node->diffuse;
+    l.specular = node->specular;
+    l.constantAttenuation = node->constAtt;
+    l.linearAttenuation = node->linearAtt;
+    l.quadraticAttenuation = node->quadAtt;
+    lights.insert(lights.end(), l);
+
     ++count;
     CHECK_FOR_GL_ERROR();
     node->VisitSubNodes(*this);
+
 }
 
 void LightVisitor::VisitSpotLightNode(SpotLightNode* node) {
@@ -119,12 +145,30 @@ void LightVisitor::VisitSpotLightNode(SpotLightNode* node) {
     glLightf(light, GL_LINEAR_ATTENUATION, node->linearAtt);
     glLightf(light, GL_QUADRATIC_ATTENUATION, node->quadAtt);
     glEnable(light);
+    
+    LightSource l;
+    l.position = (modelViewMatrix.GetTranspose() * Vector<4,float>(0.0, 0.0, 0.0, 1.0));
+
+    l.ambient = node->ambient;
+    l.diffuse = node->diffuse;
+    l.specular = node->specular;
+    l.constantAttenuation = node->constAtt;
+    l.linearAttenuation = node->linearAtt;
+    l.quadraticAttenuation = node->quadAtt;
+
+    l.spotDirection = (modelViewMatrix.GetReduced().GetTranspose() * Vector<3,float>(0.0, -1.0, 0.0)).GetNormalize();
+    l.spotCutoff = node->cutoff;
+    l.spotExponent = node->exponent;
+    lights.insert(lights.end(), l);
+
     ++count;
     CHECK_FOR_GL_ERROR();
     node->VisitSubNodes(*this);            
 }
 
 void LightVisitor::Handle(RenderingEventArg arg) {
+    lights.clear();
+    modelViewMatrix = arg.canvas->GetViewingVolume()->GetViewMatrix();
     #if OE_SAFE
     if (arg.canvas->GetScene() == NULL)
         throw new Exception("Scene was NULL in LightVisitor.");
@@ -139,6 +183,11 @@ void LightVisitor::Handle(RenderingEventArg arg) {
         CHECK_FOR_GL_ERROR();
     }
 }
+
+vector<LightVisitor::LightSource> LightVisitor::GetLights() {
+    return lights;
+}
+
 
 } // NS OpenGL
 } // NS OpenEngine

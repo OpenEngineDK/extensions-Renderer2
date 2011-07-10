@@ -66,6 +66,9 @@ void GLRenderer::RenderScene(Canvas3D* canvas, Time start, unsigned int approx) 
     // run the processing phases
     RenderingEventArg rarg(canvas, *this, start, approx);
     this->preProcess.Notify(rarg);
+    
+    rv->light = lv->GetLights().at(0);
+    
     // this->stage = RENDERER_PROCESS;
     this->process.Notify(rarg);
     // this->stage = RENDERER_POSTPROCESS;

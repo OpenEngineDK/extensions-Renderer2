@@ -50,12 +50,18 @@ PhongShader::PhongShader(Mesh* mesh) {
     ITexture2DPtr specular = mat->Get2DTextures()["specular"];
     ITexture2DPtr bump = mat->Get2DTextures()["normal"];
     ITexture2DPtr opacity = mat->Get2DTextures()["opacity"];
-    if (!bump)
+    if (!bump) {
         bump = mat->Get2DTextures()["height"];
-    if (bump && bump->GetChannels() < 3) bump.reset();
+        // if (bump) logger.info << "HEST" << (int)bump->GetChannels() <<logger.end;
+        
+    }
+    //if (bump && bump->GetChannels() < 3) {bump.reset(); logger.info << "PEST" << logger.end;};
 
-    const string vertexFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShader.glsl.vert");
-    const string fragmentFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShader.glsl.frag");
+    // const string vertexFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShader.glsl.vert");
+    // const string fragmentFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShader.glsl.frag");
+
+    const string vertexFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShaderESCompatible.glsl.vert");
+    const string fragmentFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShaderESCompatible.glsl.frag");
 
     int sz = File::GetSize(vertexFile);
     char* buf = new char[sz];
@@ -82,6 +88,7 @@ PhongShader::PhongShader(Mesh* mesh) {
     // concatenate shaders with defines
     if (ambient) {
         AddDefine("AMBIENT_MAP");
+        AddDefine("AMBIENT_INDEX", mat->GetUVIndex(ambient));
         SetTexture2D("ambientMap", ambient);
     }
     
@@ -89,12 +96,13 @@ PhongShader::PhongShader(Mesh* mesh) {
         AddDefine("DIFFUSE_MAP");
         AddDefine("DIFFUSE_INDEX", mat->GetUVIndex(diffuse));
         SetTexture2D("diffuseMap", diffuse);
-
+        
         // logger.info << "diffuse index: " << mat->GetUVIndex(diffuse) << logger.end;
     }
 
     if (specular) {
         AddDefine("SPECULAR_MAP");
+        AddDefine("SPECULAR_INDEX", mat->GetUVIndex(specular));
         SetTexture2D("specularMap", specular);
     }
 
@@ -103,7 +111,6 @@ PhongShader::PhongShader(Mesh* mesh) {
         AddDefine("BUMP_MAP");
         AddDefine("BUMP_INDEX", mat->GetUVIndex(bump));
         SetTexture2D("bumpMap", bump);
-
         // logger.info << "bump index: " << mat->GetUVIndex(bump) << logger.end;
     }    
 
@@ -114,11 +121,26 @@ PhongShader::PhongShader(Mesh* mesh) {
         // logger.info << "opacity index: " << mat->GetUVIndex(diffuse) << logger.end;
     }
 
-    if (bump && tans && bitans) {
-        SetAttribute("tangent", tans);
-        SetAttribute("bitangent", bitans);
+    map<string, IDataBlockPtr> attribs = mesh->GetGeometrySet()->GetAttributeLists();
+    map<string, IDataBlockPtr>::iterator itr = attribs.begin();
+    
+    for (; itr != attribs.end(); ++itr) {
+        // logger.info << "attrib: " << itr->first << logger.end;
+        SetAttribute(itr->first, itr->second);
     }
 
+    if (!(bump && tans && bitans)) {
+        UnsetAttribute("tangent");
+        UnsetAttribute("bitangent");
+    }
+
+    // set material
+
+    GetUniform("frontMaterial.ambient").Set(mat->ambient);
+    GetUniform("frontMaterial.diffuse").Set(mat->diffuse);
+    GetUniform("frontMaterial.specular").Set(mat->specular);
+    GetUniform("frontMaterial.shininess").Set(mat->shininess);
+    
     // logger.info << vertexShader << logger.end;
     // logger.info << fragmentShader << logger.end;
 }
@@ -126,6 +148,36 @@ PhongShader::PhongShader(Mesh* mesh) {
 PhongShader::~PhongShader() {
 
 }
+
+void PhongShader::SetModelViewMatrix(Matrix<4,4,float> m) {
+    //Optimization: store the uniforms
+    GetUniform("modelViewMatrix").Set(m);
+    GetUniform("normalMatrix").Set(m.GetReduced().GetInverse().GetTranspose());
+}
+
+void PhongShader::SetModelViewProjectionMatrix(Matrix<4,4,float> m) {
+    //Optimization: store the uniform
+    GetUniform("modelViewProjectionMatrix").Set(m);
+}
+
+void PhongShader::SetLight(LightVisitor::LightSource l, Vector<4,float> globalAmbient) {
+    // logger.info << "l.pos: " << l.position << logger.end;
+    // logger.info << "l.amb: " << l.ambient << logger.end;
+    // logger.info << "l.dif: " << l.diffuse << logger.end;
+    // logger.info << "l.spec: " << l.specular << logger.end;
+    // logger.info << "l.const: " << l.constantAttenuation << logger.end;
+    // logger.info << "l.linear: " << l.linearAttenuation << logger.end;
+    // logger.info << "l.quad: " << l.quadraticAttenuation << logger.end;
+    GetUniform("globalAmbient").Set(globalAmbient); 
+    GetUniform("lightSource[0].position").Set(l.position); 
+    GetUniform("lightSource[0].ambient").Set(l.ambient); 
+    GetUniform("lightSource[0].diffuse").Set(l.diffuse); 
+    GetUniform("lightSource[0].specular").Set(l.specular); 
+    GetUniform("lightSource[0].constantAttenuation").Set(l.constantAttenuation); 
+    GetUniform("lightSource[0].linearAttenuation").Set(l.linearAttenuation); 
+    GetUniform("lightSource[0].quadraticAttenuation").Set(l.quadraticAttenuation); 
+}
+
 
 }
 }

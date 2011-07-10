@@ -14,6 +14,9 @@
 #include <Scene/ISceneNodeVisitor.h>
 #include <Core/IListener.h>
 #include <Meta/OpenGL.h>
+#include <Math/Matrix.h>
+#include <Math/Vector.h>
+#include <vector>
 
 namespace OpenEngine {
 
@@ -34,18 +37,36 @@ using OpenEngine::Scene::DirectionalLightNode;
 using OpenEngine::Scene::SpotLightNode;
 using OpenEngine::Scene::ISceneNodeVisitor;
 using OpenEngine::Core::IListener;
+using Math::Matrix;
+using Math::Vector;
 
+using std::vector;
 /**
  * Setup OpenGL lighting
  *
  * @class LightVisitor LightVisitor.h Renderers2/OpenGL/LightVisitor.h
  */
 class LightVisitor: public ISceneNodeVisitor, public IListener<RenderingEventArg> {
+public:
+    struct LightSource {
+        Vector<4,float> position;
+        float constantAttenuation;
+        float linearAttenuation;
+        float quadraticAttenuation;
+        Vector<4,float> ambient;
+        Vector<4,float> diffuse;
+        Vector<4,float> specular;
+        
+        Vector<3,float> spotDirection;
+        float spotCutoff;
+        float spotExponent;
+    };
 private:
     float pos[4], dir[4];
     GLint count;
+    Matrix<4,4,float> modelViewMatrix;
+    vector<LightSource> lights;
 public:
-
     LightVisitor(); 
     ~LightVisitor();
         
@@ -54,6 +75,8 @@ public:
     void VisitDirectionalLightNode(DirectionalLightNode* node);
     void VisitPointLightNode(PointLightNode* node);
     void VisitSpotLightNode(SpotLightNode* node);
+    
+    vector<LightSource> GetLights();
 };
 
 } // NS OpenGL

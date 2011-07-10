@@ -13,7 +13,9 @@
 #include <Scene/ISceneNodeVisitor.h>
 #include <Core/IListener.h>
 #include <Renderers2/OpenGL/GLRenderer.h>
+#include <Renderers2/OpenGL/LightVisitor.h>
 #include <Meta/OpenGL.h>
+#include <Math/Matrix.h>
 
 #include <map>
 
@@ -26,6 +28,7 @@ namespace OpenEngine {
     }
     namespace Resources2 {
         class Shader;
+        class PhongShader;
     }
 
 namespace Renderers2 {
@@ -36,9 +39,11 @@ using Core::IListener;
 using Geometry::Mesh;
 using Geometry::GeometrySet;
 using Geometry::Material;
+using Math::Matrix;
 using Scene::RenderStateNode;
 using Scene::TransformationNode;
 using Scene::MeshNode;
+using Resources2::PhongShader;
 using Resources2::Shader;
 using std::map;
 
@@ -53,14 +58,17 @@ private:
     // bool renderBinormal, renderTangent, renderSoftNormal, renderHardNormal;
     bool renderTexture, renderShader;
 
-    map<Mesh*, Shader*> shaders; // hack until material type is revised
+    map<Mesh*, PhongShader*> shaders; // hack until material type is revised
+
+    Matrix<4,4,float> modelViewMatrix, projectionMatrix;
 
     inline void ApplyRenderState(RenderStateNode* node);
     inline void BindUniforms(Shader* shad, GLint id);
-    inline void BindAttributes(GeometrySet* gs, Shader* shad, GLint id);
-    inline void BindTextures2D(Material* mat, Shader* shad, GLint id);
-
+    inline void BindAttributes(Shader* shad, GLint id);
+    inline void BindTextures2D(Shader* shad, GLint id);
 public:
+    LightVisitor::LightSource light;
+    
     RenderingView();
     virtual ~RenderingView();
     void VisitMeshNode(MeshNode* node);

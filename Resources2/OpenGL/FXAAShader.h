@@ -24,7 +24,6 @@ using Renderers2::OpenGL::RenderingEventArg;
 class FXAAShader: public Shader, public IListener<RenderingEventArg> {
 private:
     float vertices[4*2]; // 4 2-vectors
-    unsigned char indices[4]; // 4 index values
     bool active;
 public:
     FXAAShader();

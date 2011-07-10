@@ -61,7 +61,7 @@ public:
     void Set(Matrix<4,4,float> v);
 
     Kind GetKind();
-    const Data GetData();
+    Data GetData();
 };
 
 /**
@@ -91,6 +91,7 @@ public:
     
     IDataBlockPtr GetAttribute(string name);
     void SetAttribute(string name, IDataBlockPtr attr);
+    void UnsetAttribute(string name);
 
     ITexture2DPtr GetTexture2D(string name);
     void SetTexture2D(string name, ITexture2DPtr tex);

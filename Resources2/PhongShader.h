@@ -12,6 +12,7 @@
 #define _OE_GLSL_PHONG_SHADER_H_
 
 #include <Resources2/Shader.h>
+#include <Renderers2/OpenGL/LightVisitor.h>
 
 namespace OpenEngine {
     namespace Geometry {
@@ -20,6 +21,7 @@ namespace OpenEngine {
 namespace Resources2 {
 
 using Geometry::Mesh;
+using Renderers2::OpenGL::LightVisitor;
 
 class PhongShader: public Shader {
 private:
@@ -28,6 +30,11 @@ private:
 public:
     PhongShader(Mesh* mesh);
     virtual ~PhongShader();
+
+    void SetModelViewMatrix(Matrix<4,4,float> m);
+    void SetModelViewProjectionMatrix(Matrix<4,4,float> m);
+
+    void SetLight(LightVisitor::LightSource l, Vector<4,float> globalAmbient);
 };
 
 }
