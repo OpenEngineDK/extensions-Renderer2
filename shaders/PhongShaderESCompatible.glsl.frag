@@ -31,7 +31,7 @@ uniform sampler2D bumpMap;
 void main (void)
 {
 #ifdef BUMP_MAP
-    vec3 n = texture2D(bumpMap, texCoord[BUMP_INDEX].st).rgb * vec3(2.0) - vec3(1.0);
+    vec3 n = normalize(texture2D(bumpMap, texCoord[BUMP_INDEX].st).xyz * 2.0 - 1.0);
 #else
     vec3 n = normalize(norm);
 #endif  
@@ -77,7 +77,7 @@ void main (void)
                     lightSource[i].diffuse *
 
 #ifdef DIFFUSE_MAP
-                    texture2D(diffuseMap, texCoord[DIFFUSE_INDEX].st) *
+ //                    texture2D(diffuseMap, texCoord[DIFFUSE_INDEX].st) *
 #else
                     frontMaterial.diffuse *
 #endif

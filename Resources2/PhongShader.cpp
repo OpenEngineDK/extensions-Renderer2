@@ -1,7 +1,6 @@
 // GLSL Phong shader implementation
 // -------------------------------------------------------------------
 // Copyright (C) 2010 OpenEngine.dk (See AUTHORS) 
-// Modified by Anders Bach Nielsen <abachn@daimi.au.dk> - 21. Nov 2007
 // 
 // This program is free software; It is covered by the GNU General 
 // Public License version 2 or any later version. 
@@ -40,6 +39,7 @@ void PhongShader::AddDefine(string name, int val) {
 }
 
 PhongShader::PhongShader(Mesh* mesh) {
+    logger.info << "phong" << logger.end;
 
     Material* mat = mesh->GetMaterial().get();
     IDataBlockPtr tans = mesh->GetGeometrySet()->GetAttributeList("tangent");
@@ -51,11 +51,15 @@ PhongShader::PhongShader(Mesh* mesh) {
     ITexture2DPtr bump = mat->Get2DTextures()["normal"];
     ITexture2DPtr opacity = mat->Get2DTextures()["opacity"];
     if (!bump) {
-        bump = mat->Get2DTextures()["height"];
-        // if (bump) logger.info << "HEST" << (int)bump->GetChannels() <<logger.end;
-        
+        bump = mat->Get2DTextures()["height"];        
     }
-    //if (bump && bump->GetChannels() < 3) {bump.reset(); logger.info << "PEST" << logger.end;};
+    if (bump) {
+        bump->Load();
+        if (bump->GetChannels() < 3) {
+            logger.info << "Dropping bump map, channels: " << (int)bump->GetChannels() << logger.end;
+            bump.reset(); 
+        }
+    }
 
     // const string vertexFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShader.glsl.vert");
     // const string fragmentFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShader.glsl.frag");
@@ -90,6 +94,8 @@ PhongShader::PhongShader(Mesh* mesh) {
         AddDefine("AMBIENT_MAP");
         AddDefine("AMBIENT_INDEX", mat->GetUVIndex(ambient));
         SetTexture2D("ambientMap", ambient);
+
+        logger.info << "ambient index: " << mat->GetUVIndex(ambient) << logger.end;
     }
     
     if (diffuse) {
@@ -97,35 +103,37 @@ PhongShader::PhongShader(Mesh* mesh) {
         AddDefine("DIFFUSE_INDEX", mat->GetUVIndex(diffuse));
         SetTexture2D("diffuseMap", diffuse);
         
-        // logger.info << "diffuse index: " << mat->GetUVIndex(diffuse) << logger.end;
+        logger.info << "diffuse index: " << mat->GetUVIndex(diffuse) << logger.end;
     }
 
     if (specular) {
         AddDefine("SPECULAR_MAP");
         AddDefine("SPECULAR_INDEX", mat->GetUVIndex(specular));
         SetTexture2D("specularMap", specular);
+
+        logger.info << "specular index: " << mat->GetUVIndex(specular) << logger.end;
     }
 
     if (bump && tans && bitans) {
-        // logger.info << "bump channels: " << (unsigned int)bump->GetChannels() << logger.end;
+        logger.info << "bump channels: " << (unsigned int)bump->GetChannels() << logger.end;
         AddDefine("BUMP_MAP");
         AddDefine("BUMP_INDEX", mat->GetUVIndex(bump));
         SetTexture2D("bumpMap", bump);
-        // logger.info << "bump index: " << mat->GetUVIndex(bump) << logger.end;
+        logger.info << "bump index: " << mat->GetUVIndex(bump) << logger.end;
     }    
 
     if (opacity) {
         AddDefine("OPACITY_MAP");
         AddDefine("OPACITY_INDEX", mat->GetUVIndex(opacity));
         SetTexture2D("opacityMap", opacity);
-        // logger.info << "opacity index: " << mat->GetUVIndex(diffuse) << logger.end;
+        logger.info << "opacity index: " << mat->GetUVIndex(diffuse) << logger.end;
     }
 
     map<string, IDataBlockPtr> attribs = mesh->GetGeometrySet()->GetAttributeLists();
     map<string, IDataBlockPtr>::iterator itr = attribs.begin();
     
     for (; itr != attribs.end(); ++itr) {
-        // logger.info << "attrib: " << itr->first << logger.end;
+        logger.info << "attrib: " << itr->first << logger.end;
         SetAttribute(itr->first, itr->second);
     }
 
@@ -136,9 +144,9 @@ PhongShader::PhongShader(Mesh* mesh) {
 
     // set material
 
-    GetUniform("frontMaterial.ambient").Set(mat->ambient);
-    GetUniform("frontMaterial.diffuse").Set(mat->diffuse);
-    GetUniform("frontMaterial.specular").Set(mat->specular);
+    if (!ambient) GetUniform("frontMaterial.ambient").Set(mat->ambient);
+    if (!diffuse) GetUniform("frontMaterial.diffuse").Set(mat->diffuse);
+    if (!specular) GetUniform("frontMaterial.specular").Set(mat->specular);
     GetUniform("frontMaterial.shininess").Set(mat->shininess);
     
     // logger.info << vertexShader << logger.end;

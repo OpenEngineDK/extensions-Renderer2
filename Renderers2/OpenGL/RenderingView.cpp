@@ -64,7 +64,7 @@ void RenderingView::Handle(RenderingEventArg arg) {
 
     map<Mesh*, PhongShader*>::iterator itr = shaders.begin();
     for (; itr != shaders.end(); ++itr) {
-        itr->second->SetLight(light, Vector<4,float>(0.5, 0.5, 0.5, 1.0));
+        itr->second->SetLight(light, Vector<4,float>(0.3, 0.3, 0.3, 1.0));
     }
 
     modelViewMatrix = arg.canvas->GetViewingVolume()->GetViewMatrix();
@@ -207,19 +207,19 @@ void RenderingView::BindUniforms(Shader* shad, GLint id) {
     Shader::UniformIterator it = shad->UniformsBegin();
     for (; it != shad->UniformsEnd(); ++it) {
         GLint loc = glGetUniformLocation(id, (*it).first.c_str());
-// #if OE_SAFE
-//         if (loc == -1) throw Exception(string("Uniform location not found: ") + it->first);
-// #endif
+#if OE_SAFE
+        if (loc == -1) throw Exception(string("Uniform location not found: ") + it->first);
+#endif
         // if (loc == -1) logger.warning << string("Uniform location not found: ") + it->first << logger.end;
-        if (loc == -1) continue;
+        // if (loc == -1) continue;
         Uniform& uniform = (*it).second;
         const Uniform::Data data = uniform.GetData();
         switch (uniform.GetKind()) {
         case Uniform::INT:
-            glUniform1iv(loc, 1, &data.i);
+            glUniform1i(loc, data.i);
             break;
         case Uniform::FLOAT:
-            glUniform1fv(loc, 1, &data.f);
+            glUniform1f(loc, data.f);
             break;
         case Uniform::FLOAT3:
             glUniform3fv(loc, 1, data.fv);
@@ -257,7 +257,9 @@ void RenderingView::BindAttributes(Shader* shad, GLint id) {
             glBindBuffer(GL_ARRAY_BUFFER, ctx->LookupVBO(db));
             glEnableVertexAttribArray(loc);
             glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, 0);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
             CHECK_FOR_GL_ERROR();
+
         }
     }
     else {
@@ -267,10 +269,24 @@ void RenderingView::BindAttributes(Shader* shad, GLint id) {
 // #if OE_SAFE
 //             if (loc == -1) throw Exception(string("Attribute location not found: ") + it->first);
 // #endif
+            glEnableVertexAttribArray(loc);
             IDataBlock* db = it->second.get();
             glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, db->GetVoidData());
             CHECK_FOR_GL_ERROR();
         }
+    }
+}
+
+void UnbindAttributes(Shader* shad, GLint id) {
+    Shader::AttributeIterator it = shad->AttributesBegin();
+    for (; it != shad->AttributesEnd(); ++it) {
+        GLint loc = glGetAttribLocation(id, it->first.c_str());
+        if (loc == -1) continue;
+        // #if OE_SAFE
+        //             if (loc == -1) throw Exception(string("Attribute location not found: ") + it->first);
+        // #endif
+        glDisableVertexAttribArray(loc);
+        CHECK_FOR_GL_ERROR();
     }
 }
 
@@ -292,6 +308,19 @@ void RenderingView::BindTextures2D(Shader* shad, GLint id) {
     }
 }
 
+void UnbindTextures2D(Shader* shad, GLint id) {
+    Shader::Texture2DIterator it = shad->Textures2DBegin();
+    GLint texUnit = 0;
+    for (; it != shad->Textures2DEnd(); ++it) {
+        GLint loc = glGetUniformLocation(id, it->first.c_str());
+        if (loc == -1) continue;
+
+        glActiveTexture(GL_TEXTURE0 + texUnit);
+        CHECK_FOR_GL_ERROR();
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+}
+
 /**
  * Process a mesh node.
  *
@@ -308,13 +337,14 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
     GLsizei offset = mesh->GetIndexOffset();
     Geometry::Type type = mesh->GetType();
 
+    GLuint shaderId;
+    PhongShader* shad;
     // material
-    if (renderShader && ctx->ShaderSupport() && true /* todo: check for material shader */) {        
+    if (renderShader && ctx->ShaderSupport()) {        
         // for now we simply rebind everything in each lookup
         // todo: optimize to only rebind when needed (event driven rebinding).
         // todo: optimize by caching locations
         map<Mesh*, PhongShader*>::iterator it = shaders.find(mesh);
-        PhongShader* shad;
         if (it != shaders.end())
             shad = it->second;
         else {
@@ -324,7 +354,7 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
         shad->SetModelViewMatrix(modelViewMatrix);
         shad->SetModelViewProjectionMatrix(modelViewMatrix * projectionMatrix);
 
-        GLuint shaderId = ctx->LookupShader(shad);
+        shaderId = ctx->LookupShader(shad);
         glUseProgram(shaderId);
         BindUniforms(shad, shaderId);
         BindAttributes(shad, shaderId);
@@ -338,8 +368,11 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
         else {
             glDrawElements(type, count, GL_UNSIGNED_INT, indices->GetData() + offset);
         }
+        UnbindAttributes(shad, shaderId);        
+        UnbindTextures2D(shad, shaderId);        
         glUseProgram(0);
         node->VisitSubNodes(*this);
+        CHECK_FOR_GL_ERROR();
         return; // no fixed function stuff if shader is supported!
     }
     
@@ -419,7 +452,7 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
         glDrawElements(type, count, GL_UNSIGNED_INT, indices->GetData() + offset);
     }
 
-    // cleanup (is it necessary?)
+    // cleanup
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_NORMAL_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
