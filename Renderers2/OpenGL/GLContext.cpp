@@ -160,6 +160,10 @@ unsigned int GLContext::GLTypeSize(Type t){
         return sizeof(GLubyte);
     case Types::SBYTE:
         return sizeof(GLbyte);
+    case Types::USHORT:
+        return sizeof(GLushort);
+    case Types::SHORT:
+        return sizeof(GLshort);
     case Types::UINT:
         return sizeof(GLuint);
     case Types::INT:
@@ -170,7 +174,7 @@ unsigned int GLContext::GLTypeSize(Type t){
         return sizeof(GLdouble);
     default:
         //case Types::NOTYPE:
-        return 0;
+        throw Exception("GLTypeSize: Unknown type.");
     }
     return sizeof(GLshort);
 }

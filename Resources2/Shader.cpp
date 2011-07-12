@@ -103,6 +103,12 @@ void Shader::SetTexture2D(string name, ITexture2DPtr tex) {
     textures[name] = tex;    
 }
 
+void Shader::UnsetTexture2D(string name) {
+    map<string,ITexture2DPtr>::iterator it = textures.find(name);
+    if (it != textures.end())
+        textures.erase(it);
+}
+
 string Shader::GetVertexShader() {
     return vertexShader;
 }

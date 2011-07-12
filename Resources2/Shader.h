@@ -65,10 +65,13 @@ public:
 };
 
 /**
- * OpenEngine Shader Ressource
+ * OpenEngine Shader
  *
  * Encapsulates the data necessary to represent a shader effect.
- *  
+ * Render contexts must handle GPU allocation and deallocation. 
+ *
+ * @see Renderers2/OpenGL/GLContext
+ *
  * @class Shader Shader.h Resources2/Shader.h
  */
 class Shader {
@@ -95,6 +98,7 @@ public:
 
     ITexture2DPtr GetTexture2D(string name);
     void SetTexture2D(string name, ITexture2DPtr tex);
+    void UnsetTexture2D(string name);
 
     virtual string GetVertexShader(); 
     virtual string GetFragmentShader();
@@ -107,7 +111,6 @@ public:
 
     Texture2DIterator Textures2DBegin();
     Texture2DIterator Textures2DEnd();
-    
 };
 
 } // NS Resources

@@ -282,9 +282,9 @@ void UnbindAttributes(Shader* shad, GLint id) {
     for (; it != shad->AttributesEnd(); ++it) {
         GLint loc = glGetAttribLocation(id, it->first.c_str());
         if (loc == -1) continue;
-        // #if OE_SAFE
-        //             if (loc == -1) throw Exception(string("Attribute location not found: ") + it->first);
-        // #endif
+// #if OE_SAFE
+//             if (loc == -1) throw Exception(string("Attribute location not found: ") + it->first);
+// #endif
         glDisableVertexAttribArray(loc);
         CHECK_FOR_GL_ERROR();
     }
@@ -332,7 +332,8 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
     Material* mat = mesh->GetMaterial().get();
 
     // index buffer
-    Indices* indices = mesh->GetIndices().get();
+    IDataBlock* indices = mesh->indices.get();
+
     GLsizei count = mesh->GetDrawingRange();
     GLsizei offset = mesh->GetIndexOffset();
     Geometry::Type type = mesh->GetType();
@@ -360,13 +361,20 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
         BindAttributes(shad, shaderId);
         BindTextures2D(shad, shaderId);
 
+
         if (ctx->VBOSupport()) {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ctx->LookupVBO(indices));
-            glDrawElements(type, count, GL_UNSIGNED_INT, (GLvoid*)(offset * sizeof(GLuint)));
+            glDrawElements(type, 
+                           count, 
+                           indices->GetType(), 
+                           (GLvoid*)(offset * GLContext::GLTypeSize(indices->GetType())));
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         }
         else {
-            glDrawElements(type, count, GL_UNSIGNED_INT, indices->GetData() + offset);
+            glDrawElements(type, 
+                           count, 
+                           indices->GetType(), 
+                           (char*)indices->GetVoidDataPtr() + offset * GLContext::GLTypeSize(indices->GetType()));
         }
         UnbindAttributes(shad, shaderId);        
         UnbindTextures2D(shad, shaderId);        
@@ -441,7 +449,10 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
         }
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ctx->LookupVBO(indices));
-        glDrawElements(type, count, GL_UNSIGNED_INT, (GLvoid*)(offset * sizeof(GLuint)));
+        glDrawElements(type, 
+                       count, 
+                       indices->GetType(), 
+                       (GLvoid*)(offset * GLContext::GLTypeSize(indices->GetType())));
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
@@ -449,7 +460,10 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
         if (v) glVertexPointer(v->GetDimension(), GL_FLOAT, 0, v->GetVoidDataPtr());
         if (n) glNormalPointer(GL_FLOAT, 0, n->GetVoidDataPtr());
         if (c) glColorPointer(c->GetDimension(), GL_FLOAT, 0, c->GetVoidDataPtr());
-        glDrawElements(type, count, GL_UNSIGNED_INT, indices->GetData() + offset);
+        glDrawElements(type, 
+                       count, 
+                       indices->GetType(), 
+                       (char*)indices->GetVoidDataPtr() + offset * GLContext::GLTypeSize(indices->GetType()));
     }
 
     // cleanup
