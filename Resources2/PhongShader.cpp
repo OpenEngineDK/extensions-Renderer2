@@ -39,7 +39,7 @@ void PhongShader::AddDefine(string name, int val) {
 }
 
 PhongShader::PhongShader(Mesh* mesh) {
-    logger.info << "phong" << logger.end;
+    // logger.info << "phong" << logger.end;
 
     Material* mat = mesh->GetMaterial().get();
     IDataBlockPtr tans = mesh->GetGeometrySet()->GetAttributeList("tangent");
@@ -56,7 +56,7 @@ PhongShader::PhongShader(Mesh* mesh) {
     if (bump) {
         bump->Load();
         if (bump->GetChannels() < 3) {
-            logger.info << "Dropping bump map, channels: " << (int)bump->GetChannels() << logger.end;
+            // logger.info << "Dropping bump map, channels: " << (int)bump->GetChannels() << logger.end;
             bump.reset(); 
         }
     }
@@ -95,7 +95,7 @@ PhongShader::PhongShader(Mesh* mesh) {
         AddDefine("AMBIENT_INDEX", mat->GetUVIndex(ambient));
         SetTexture2D("ambientMap", ambient);
 
-        logger.info << "ambient index: " << mat->GetUVIndex(ambient) << logger.end;
+    //     logger.info << "ambient index: " << mat->GetUVIndex(ambient) << logger.end;
     }
     
     if (diffuse) {
@@ -103,7 +103,7 @@ PhongShader::PhongShader(Mesh* mesh) {
         AddDefine("DIFFUSE_INDEX", mat->GetUVIndex(diffuse));
         SetTexture2D("diffuseMap", diffuse);
         
-        logger.info << "diffuse index: " << mat->GetUVIndex(diffuse) << logger.end;
+        // logger.info << "diffuse index: " << mat->GetUVIndex(diffuse) << logger.end;
     }
 
     if (specular) {
@@ -111,29 +111,29 @@ PhongShader::PhongShader(Mesh* mesh) {
         AddDefine("SPECULAR_INDEX", mat->GetUVIndex(specular));
         SetTexture2D("specularMap", specular);
 
-        logger.info << "specular index: " << mat->GetUVIndex(specular) << logger.end;
+        // logger.info << "specular index: " << mat->GetUVIndex(specular) << logger.end;
     }
 
     if (bump && tans && bitans) {
-        logger.info << "bump channels: " << (unsigned int)bump->GetChannels() << logger.end;
+        // logger.info << "bump channels: " << (unsigned int)bump->GetChannels() << logger.end;
         AddDefine("BUMP_MAP");
         AddDefine("BUMP_INDEX", mat->GetUVIndex(bump));
         SetTexture2D("bumpMap", bump);
-        logger.info << "bump index: " << mat->GetUVIndex(bump) << logger.end;
+        // logger.info << "bump index: " << mat->GetUVIndex(bump) << logger.end;
     }    
 
     if (opacity) {
         AddDefine("OPACITY_MAP");
         AddDefine("OPACITY_INDEX", mat->GetUVIndex(opacity));
         SetTexture2D("opacityMap", opacity);
-        logger.info << "opacity index: " << mat->GetUVIndex(diffuse) << logger.end;
+        // logger.info << "opacity index: " << mat->GetUVIndex(diffuse) << logger.end;
     }
 
     map<string, IDataBlockPtr> attribs = mesh->GetGeometrySet()->GetAttributeLists();
     map<string, IDataBlockPtr>::iterator itr = attribs.begin();
     
     for (; itr != attribs.end(); ++itr) {
-        logger.info << "attrib: " << itr->first << logger.end;
+        // logger.info << "attrib: " << itr->first << logger.end;
         SetAttribute(itr->first, itr->second);
     }
 
@@ -176,14 +176,14 @@ void PhongShader::SetLight(LightVisitor::LightSource l, Vector<4,float> globalAm
     // logger.info << "l.const: " << l.constantAttenuation << logger.end;
     // logger.info << "l.linear: " << l.linearAttenuation << logger.end;
     // logger.info << "l.quad: " << l.quadraticAttenuation << logger.end;
-    GetUniform("globalAmbient").Set(globalAmbient); 
-    GetUniform("lightSource[0].position").Set(l.position); 
-    GetUniform("lightSource[0].ambient").Set(l.ambient); 
-    GetUniform("lightSource[0].diffuse").Set(l.diffuse); 
-    GetUniform("lightSource[0].specular").Set(l.specular); 
-    GetUniform("lightSource[0].constantAttenuation").Set(l.constantAttenuation); 
-    GetUniform("lightSource[0].linearAttenuation").Set(l.linearAttenuation); 
-    GetUniform("lightSource[0].quadraticAttenuation").Set(l.quadraticAttenuation); 
+    GetUniform("globalAmbient").Set(globalAmbient);
+    GetUniform("lightSource[0].position").Set(l.position);
+    GetUniform("lightSource[0].ambient").Set(l.ambient);
+    GetUniform("lightSource[0].diffuse").Set(l.diffuse);
+    GetUniform("lightSource[0].specular").Set(l.specular);
+    GetUniform("lightSource[0].constantAttenuation").Set(l.constantAttenuation);
+    GetUniform("lightSource[0].linearAttenuation").Set(l.linearAttenuation);
+    GetUniform("lightSource[0].quadraticAttenuation").Set(l.quadraticAttenuation);
 }
 
 

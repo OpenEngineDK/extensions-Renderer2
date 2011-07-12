@@ -54,15 +54,15 @@ class GLContext {
 private:
     GLSLVersion glslversion;
     bool init, fboSupport, vboSupport, shaderSupport;
-    map<ICanvas*, GLint> canvases;
-    map<ITexture2D*, GLint> textures;
-    map<IDataBlock*, GLint> vbos;
-    map<Shader*, GLint> shaders;
+    map<ICanvas*, GLuint> canvases;
+    map<ITexture2D*, GLuint> textures;
+    map<IDataBlock*, GLuint> vbos;
+    map<Shader*, GLuint> shaders;
 
-    GLint LoadCanvas(ICanvas* can);
-    GLint LoadTexture(ITexture2D* tex);
-    GLint LoadVBO(IDataBlock* db);
-    GLint LoadShader(Shader* shad);
+    GLuint LoadCanvas(ICanvas* can);
+    GLuint LoadTexture(ITexture2D* tex);
+    GLuint LoadVBO(IDataBlock* db);
+    GLuint LoadShader(Shader* shad);
 
     inline void SetupTexParameters(ITexture2D* tex);
 public:
@@ -75,15 +75,20 @@ public:
     bool VBOSupport();
     bool ShaderSupport();
     
-    GLint LookupCanvas(ICanvas* can);
-    GLint LookupTexture(ITexture2D* tex);
-    GLint LookupVBO(IDataBlock* db);
-    GLint LookupShader(Shader* shad);
+    GLuint LookupCanvas(ICanvas* can);
+    GLuint LookupTexture(ITexture2D* tex);
+    GLuint LookupVBO(IDataBlock* db);
+    GLuint LookupShader(Shader* shad);
+
+    // mainly for debugging and testing
+    void ReleaseTextures();
+    void ReleaseVBOs();
+    void ReleaseShaders();
     
-    static inline GLint GLInternalColorFormat(ColorFormat f);
-    static inline GLenum GLColorFormat(ColorFormat f);
-    static inline GLenum GLAccessType(BlockType b, UpdateMode u);
-    static inline unsigned int GLTypeSize(Type t);
+    static GLint GLInternalColorFormat(ColorFormat f);
+    static GLenum GLColorFormat(ColorFormat f);
+    static GLenum GLAccessType(BlockType b, UpdateMode u);
+    static unsigned int GLTypeSize(Type t);
 
 };
 

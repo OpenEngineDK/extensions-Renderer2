@@ -200,7 +200,7 @@ GLenum GLContext::GLAccessType(BlockType b, UpdateMode u){
 
 // ------- Canvas -------
 
-GLint GLContext::LoadCanvas(ICanvas* can) {
+GLuint GLContext::LoadCanvas(ICanvas* can) {
 #if OE_SAFE
     if (can == NULL) throw Exception("Cannot load NULL canvas.");
 #endif
@@ -224,11 +224,11 @@ GLint GLContext::LoadCanvas(ICanvas* can) {
     return texid;
 }
 
-GLint GLContext::LookupCanvas(ICanvas* can) {
-    map<ICanvas*, GLint>::iterator it = canvases.find(can);
+GLuint GLContext::LookupCanvas(ICanvas* can) {
+    map<ICanvas*, GLuint>::iterator it = canvases.find(can);
     if (it != canvases.end())
         return it->second;
-    GLint id = LoadCanvas(can);
+    GLuint id = LoadCanvas(can);
     canvases[can] = id;
     return id;
 }
@@ -261,7 +261,7 @@ void GLContext::SetupTexParameters(ITexture2D* tex){
 }
 
 
-GLint GLContext::LoadTexture(ITexture2D* tex) {
+GLuint GLContext::LoadTexture(ITexture2D* tex) {
 #if OE_SAFE
     if (tex == NULL) throw Exception("Cannot load NULL texture.");
 #endif
@@ -305,17 +305,18 @@ GLint GLContext::LoadTexture(ITexture2D* tex) {
     return texid;
 }
 
-GLint GLContext::LookupTexture(ITexture2D* tex) {
-    map<ITexture2D*, GLint>::iterator it = textures.find(tex);
-    if (it != textures.end())
-        return (*it).second;
-    GLint id = LoadTexture(tex);
+GLuint GLContext::LookupTexture(ITexture2D* tex) {
+    map<ITexture2D*, GLuint>::iterator it = textures.find(tex);
+    if (it != textures.end()) {
+        return it->second;
+    }
+    GLuint id = LoadTexture(tex);
     textures[tex] = id;
     return id;
 }
 
 // ------- VBO -------
-GLint GLContext::LoadVBO(IDataBlock* db) {
+GLuint GLContext::LoadVBO(IDataBlock* db) {
 #if OE_SAFE
     if (!vboSupport) throw Exception("VBOs not supported.");
     if (db == NULL) throw Exception("Cannot bind NULL data block.");
@@ -341,11 +342,11 @@ GLint GLContext::LoadVBO(IDataBlock* db) {
     return id;
 }
 
-GLint GLContext::LookupVBO(IDataBlock* db) {
-    map<IDataBlock*, GLint>::iterator it = vbos.find(db);
+GLuint GLContext::LookupVBO(IDataBlock* db) {
+    map<IDataBlock*, GLuint>::iterator it = vbos.find(db);
     if (it != vbos.end())
         return (*it).second;
-    GLint id = LoadVBO(db);
+    GLuint id = LoadVBO(db);
     vbos[db] = id;
     return id;
 }
@@ -368,7 +369,7 @@ void PrintProgramInfoLog(GLuint program) {
     }
 }
 
-GLint GLContext::LoadShader(Shader* shad) {
+GLuint GLContext::LoadShader(Shader* shad) {
 #if OE_SAFE
     if (!shaderSupport) throw Exception("Shaders not supported.");
     if (shad == NULL) throw Exception("Cannot load NULL shader.");
@@ -447,17 +448,45 @@ GLint GLContext::LoadShader(Shader* shad) {
     return shaderId;
 }
 
-GLint GLContext::LookupShader(Shader* shad) {
-    map<Shader*, GLint>::iterator it = shaders.find(shad);
+GLuint GLContext::LookupShader(Shader* shad) {
+    map<Shader*, GLuint>::iterator it = shaders.find(shad);
     if (it != shaders.end())
         return (*it).second;
-    GLint id = LoadShader(shad);
+    GLuint id = LoadShader(shad);
     shaders[shad] = id;
     
     return id;
 }
 
+void GLContext::ReleaseTextures() {
+    map<ITexture2D*, GLuint>::iterator it = textures.begin();
+     for (; it != textures.end(); ++it) {
+         glDeleteTextures(1, &it->second);
+     }
+     textures.clear();
+}
 
+void GLContext::ReleaseVBOs() {
+    map<IDataBlock*, GLuint>::iterator it = vbos.begin();
+    for (; it != vbos.end(); ++it) {
+        glDeleteBuffers(1, &it->second);
+    }
+    vbos.clear();
+}
+
+void GLContext::ReleaseShaders() {
+    map<Shader*, GLuint>::iterator it = shaders.begin();
+    for (; it != shaders.end(); ++it) {
+        GLuint shads[2];
+        GLsizei count;
+        glGetAttachedShaders(it->second, 2, &count, shads);
+        for (GLsizei i = 0; i < count; ++i) {
+            glDeleteShader(shads[i]);
+        }
+        glDeleteProgram(it->second);
+    }
+    shaders.clear();
+}
 
 } // NS OpenGL
 } // NS Renderers
