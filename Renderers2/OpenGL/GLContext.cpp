@@ -463,7 +463,14 @@ void GLContext::ReleaseTextures() {
      for (; it != textures.end(); ++it) {
          glDeleteTextures(1, &it->second);
      }
+
+     map<ICanvas*, GLuint>::iterator it2 = canvases.begin();
+     for (; it2 != canvases.end(); ++it2) {
+         glDeleteTextures(1, &it2->second);
+     }
+
      textures.clear();
+     canvases.clear();
 }
 
 void GLContext::ReleaseVBOs() {
