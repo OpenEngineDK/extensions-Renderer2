@@ -12,15 +12,14 @@
 
 #include <Resources/ITexture.h>
 #include <Resources/IDataBlock.h>
+#include <Resources2/Shader.h>
 #include <Meta/OpenGL.h>
+#include <Core/IListener.h>
 #include <map>
 
 namespace OpenEngine {
     namespace Resources {
         class ITexture2D;
-    }
-    namespace Resources2 {
-        class Shader;
     }
     namespace Display2 {
         class ICanvas;
@@ -36,6 +35,7 @@ using Resources::UpdateMode;
 using Resources::ColorFormat;
 using Resources2::Shader;
 using Display2::ICanvas;
+using Core::IListener;
 using std::map;
 
 /**
@@ -50,7 +50,7 @@ enum GLSLVersion { GLSL_UNKNOWN, GLSL_NONE, GLSL_14, GLSL_20 };
  *
  * @class GLContext GLContext.h Renderers2/OpenGL/GLContext.h
  */
-class GLContext {
+class GLContext: public IListener<Shader::ChangedEventArg>  {
 private:
     GLSLVersion glslversion;
     bool init, fboSupport, vboSupport, shaderSupport;
@@ -90,6 +90,7 @@ public:
     static GLenum GLAccessType(BlockType b, UpdateMode u);
     static unsigned int GLTypeSize(Type t);
 
+    void Handle(Shader::ChangedEventArg arg);
 };
 
 } // NS OpenGL

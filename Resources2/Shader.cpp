@@ -30,6 +30,11 @@ void Uniform::Set(float v) {
     kind = Uniform::FLOAT;
 }
     
+void Uniform::Set(Vector<2,float> v) {
+    v.ToArray(data.fv);
+    kind = Uniform::FLOAT2;
+}
+
 void Uniform::Set(Vector<3,float> v) {
     v.ToArray(data.fv);
     kind = Uniform::FLOAT3;

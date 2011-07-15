@@ -10,7 +10,6 @@
 #include <Renderers2/OpenGL/GLContext.h>
 #include <Resources/ITexture2D.h>
 
-#include <Resources2/Shader.h>
 #include <Display2/ICanvas.h>
 
 #include <Logging/Logger.h>
@@ -393,7 +392,8 @@ GLuint GLContext::LoadShader(Shader* shad) {
 
     // compile vertex shader
     const GLchar* shaderBits[1];
-    shaderBits[0] = shad->GetVertexShader().c_str();
+    string vertexShader = shad->GetVertexShader();
+    shaderBits[0] = vertexShader.c_str();
     glShaderSource(vertexId, 1, shaderBits, NULL);
     glCompileShader(vertexId);
 
@@ -414,7 +414,8 @@ GLuint GLContext::LoadShader(Shader* shad) {
 #endif
 
     // compile fragment shader
-    shaderBits[0] = shad->GetFragmentShader().c_str();
+    string fragmentShader = shad->GetFragmentShader();;
+    shaderBits[0] = fragmentShader.c_str();
     glShaderSource(fragmentId, 1, shaderBits, NULL);
     glCompileShader(fragmentId);
     glGetShaderiv(fragmentId, GL_COMPILE_STATUS, &compiled);
@@ -454,7 +455,7 @@ GLuint GLContext::LookupShader(Shader* shad) {
         return (*it).second;
     GLuint id = LoadShader(shad);
     shaders[shad] = id;
-    
+    shad->ChangedEvent().Attach(*this);
     return id;
 }
 
@@ -484,6 +485,7 @@ void GLContext::ReleaseVBOs() {
 void GLContext::ReleaseShaders() {
     map<Shader*, GLuint>::iterator it = shaders.begin();
     for (; it != shaders.end(); ++it) {
+        it->first->ChangedEvent().Detach(*this);
         GLuint shads[2];
         GLsizei count;
         glGetAttachedShaders(it->second, 2, &count, shads);
@@ -493,6 +495,28 @@ void GLContext::ReleaseShaders() {
         glDeleteProgram(it->second);
     }
     shaders.clear();
+}
+
+void GLContext::Handle(Shader::ChangedEventArg arg) {
+    GLuint newid;
+    try {
+        newid = LoadShader(arg.shader);
+    }
+    catch (Exception e) {
+        logger.error << e.what() << " Using previously working shader." << logger.end;
+        return;
+    }
+
+    GLuint oldid = shaders[arg.shader];
+
+    GLuint shads[2];
+    GLsizei count;
+    glGetAttachedShaders(oldid, 2, &count, shads);
+    for (GLsizei i = 0; i < count; ++i) {
+        glDeleteShader(shads[i]);
+    }
+    glDeleteProgram(oldid);
+    shaders[arg.shader] = newid;
 }
 
 } // NS OpenGL

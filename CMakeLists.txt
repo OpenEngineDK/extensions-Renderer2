@@ -11,6 +11,8 @@ ADD_LIBRARY(Extensions_Renderers2
   Renderers2/OpenGL/GLContext.cpp
   Resources2/Shader.h
   Resources2/Shader.cpp
+  Resources2/ShaderResource.h
+  Resources2/ShaderResource.cpp
   Resources2/PhongShader.h
   Resources2/PhongShader.cpp
   Resources2/OpenGL/FXAAShader.h

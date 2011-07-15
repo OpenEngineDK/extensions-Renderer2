@@ -103,8 +103,8 @@ void main (void)
     color *= texture2D(diffuseMap, texCoord[DIFFUSE_INDEX].st);
 #endif 
 
-    gl_FragColor = color; 
+    gl_FragColor = color;
     //gl_FragColor.rgb = n; 
-    //gl_FragColor.rgb = normalize(lightDir[0]); 
+    //gl_FragColor.rgb = normalize(lightDir[0]);
 }
 

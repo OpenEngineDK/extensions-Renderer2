@@ -221,6 +221,9 @@ void RenderingView::BindUniforms(Shader* shad, GLint id) {
         case Uniform::FLOAT:
             glUniform1f(loc, data.f);
             break;
+        case Uniform::FLOAT2:
+            glUniform2fv(loc, 1, data.fv);
+            break;
         case Uniform::FLOAT3:
             glUniform3fv(loc, 1, data.fv);
             break;

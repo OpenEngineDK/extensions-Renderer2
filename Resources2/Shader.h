@@ -14,8 +14,10 @@
 #include <Math/Matrix.h>
 #include <Resources/IDataBlock.h>
 #include <Resources/ITexture2D.h>
+#include <Core/Event.h>
 #include <string>
 #include <map>
+#include <boost/shared_ptr.hpp>
 
 namespace OpenEngine {    
 namespace Resources2 {
@@ -24,8 +26,13 @@ using Math::Vector;
 using Math::Matrix;
 using Resources::IDataBlockPtr;
 using Resources::ITexture2DPtr;
+using Core::IEvent;
+using Core::Event;
 using std::map;
 using std::string;
+
+class Shader;
+typedef boost::shared_ptr<Shader> ShaderPtr;
 
 class Uniform {
 public:
@@ -33,6 +40,7 @@ public:
         UNKNOWN,
         INT,
         FLOAT,
+        FLOAT2,
         FLOAT3,
         FLOAT4,
         MAT3X3,
@@ -55,6 +63,7 @@ public:
 
     void Set(int v);
     void Set(float v);
+    void Set(Vector<2,float> v);
     void Set(Vector<3,float> v);
     void Set(Vector<4,float> v);
     void Set(Matrix<3,3,float> v);
@@ -75,16 +84,23 @@ public:
  * @class Shader Shader.h Resources2/Shader.h
  */
 class Shader {
-public:
+public:    
     typedef map<string, Uniform>::iterator UniformIterator;
     typedef map<string, IDataBlockPtr>::iterator AttributeIterator;
     typedef map<string, ITexture2DPtr>::iterator Texture2DIterator;
+    class ChangedEventArg {
+    public:
+        ChangedEventArg(Shader* shader): shader(shader) {}
+        virtual ~ChangedEventArg() {}
+        Shader* shader;
+    };
 private:
     map<string, Uniform> uniforms;
     map<string, IDataBlockPtr> attributes;
     map<string, ITexture2DPtr> textures;
 protected:
     string vertexShader, fragmentShader;
+    Event<ChangedEventArg> changedEvent;
 public:
     Shader();
     Shader(string vertexShader, string fragmentShader);
@@ -111,6 +127,8 @@ public:
 
     Texture2DIterator Textures2DBegin();
     Texture2DIterator Textures2DEnd();
+
+    IEvent<ChangedEventArg>& ChangedEvent() { return changedEvent; }
 };
 
 } // NS Resources

@@ -13,6 +13,7 @@
 #include <Resources/File.h>
 #include <Logging/Logger.h>
 #include <Resources/ITexture2D.h>
+#include <Resources/ResourceManager.h>
 #include <Geometry/GeometrySet.h>
 #include <Geometry/Material.h>
 #include <Geometry/Mesh.h>
@@ -26,19 +27,24 @@ using Resources::DirectoryManager;
 
 void PhongShader::AddDefine(string name) {    
     string def = string("#define ") + name + string("\n");
-    vertexShader = def + vertexShader;
-    fragmentShader = def + fragmentShader;
+    // vertexShader = def + vertexShader;
+    // fragmentShader = def + fragmentShader;
+    defines += def;
 }
 
 void PhongShader::AddDefine(string name, int val) {
     std::stringstream v;
     v << val;
     string def = string("#define ") + name + string(" ") + v.str() + string("\n");
-    vertexShader = def + vertexShader;
-    fragmentShader = def + fragmentShader;
+    // vertexShader = def + vertexShader;
+    // fragmentShader = def + fragmentShader;
+    defines += def;
 }
 
-PhongShader::PhongShader(Mesh* mesh) {
+PhongShader::PhongShader(Mesh* mesh)
+    : ShaderResource(*ResourceManager<ShaderResource>::Create("extensions/Renderer2/shaders/PhongShaderESCompatible.glsl").get())
+{
+    ShaderResource::Load();
     // logger.info << "phong" << logger.end;
 
     Material* mat = mesh->GetMaterial().get();
@@ -51,7 +57,7 @@ PhongShader::PhongShader(Mesh* mesh) {
     ITexture2DPtr bump = mat->Get2DTextures()["normal"];
     ITexture2DPtr opacity = mat->Get2DTextures()["opacity"];
     if (!bump) {
-        bump = mat->Get2DTextures()["height"];        
+        bump = mat->Get2DTextures()["height"]; 
     }
     if (bump) {
         bump->Load();
@@ -64,28 +70,28 @@ PhongShader::PhongShader(Mesh* mesh) {
     // const string vertexFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShader.glsl.vert");
     // const string fragmentFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShader.glsl.frag");
 
-    const string vertexFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShaderESCompatible.glsl.vert");
-    const string fragmentFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShaderESCompatible.glsl.frag");
+    // const string vertexFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShaderESCompatible.glsl.vert");
+    // const string fragmentFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/PhongShaderESCompatible.glsl.frag");
 
-    int sz = File::GetSize(vertexFile);
-    char* buf = new char[sz];
-    ifstream* f = File::Open(vertexFile);
-    f->read(buf, sz-1);
-    buf[sz-1] = '\0';
-    f->close();
-    vertexShader = string(buf, sz);
-    delete buf;
-    delete f;
+    // int sz = File::GetSize(vertexFile);
+    // char* buf = new char[sz];
+    // ifstream* f = File::Open(vertexFile);
+    // f->read(buf, sz-1);
+    // buf[sz-1] = '\0';
+    // f->close();
+    // vertexShader = string(buf, sz);
+    // delete buf;
+    // delete f;
 
-    sz = File::GetSize(fragmentFile);
-    buf = new char[sz];
-    f = File::Open(fragmentFile);
-    f->read(buf, sz);
-    buf[sz-1] = '\0';
-    f->close();
-    fragmentShader = string(buf, sz);
-    delete buf;
-    delete f;
+    // sz = File::GetSize(fragmentFile);
+    // buf = new char[sz];
+    // f = File::Open(fragmentFile);
+    // f->read(buf, sz);
+    // buf[sz-1] = '\0';
+    // f->close();
+    // fragmentShader = string(buf, sz);
+    // delete buf;
+    // delete f;
 
     AddDefine("NUM_LIGHTS", 1);
 
@@ -186,6 +192,13 @@ void PhongShader::SetLight(LightVisitor::LightSource l, Vector<4,float> globalAm
     GetUniform("lightSource[0].quadraticAttenuation").Set(l.quadraticAttenuation);
 }
 
+string PhongShader::GetVertexShader() {
+    return defines + vertexShader;
+}
+    
+string PhongShader::GetFragmentShader() {
+    return defines + fragmentShader;
+}
 
 }
 }
