@@ -11,6 +11,7 @@
 #include <Resources/ITexture2D.h>
 
 #include <Display2/ICanvas.h>
+#include <Display2/Canvas2D.h>
 
 #include <Logging/Logger.h>
 
@@ -232,6 +233,13 @@ GLuint GLContext::LookupCanvas(ICanvas* can) {
     return id;
 }
 
+GLuint GLContext::LookupCanvas(Canvas2D* can) {
+    GLuint id = LookupTexture(can->GetTexture().get());
+    canvases[can] = id;
+    return id;
+}
+ 
+
 // ------- Texture -------
 void GLContext::SetupTexParameters(ITexture2D* tex){
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -310,6 +318,8 @@ GLuint GLContext::LookupTexture(ITexture2D* tex) {
         return it->second;
     }
     GLuint id = LoadTexture(tex);
+    tex->ChangedEvent().Attach(*this);
+
     textures[tex] = id;
     return id;
 }
@@ -463,6 +473,7 @@ void GLContext::ReleaseTextures() {
     map<ITexture2D*, GLuint>::iterator it = textures.begin();
      for (; it != textures.end(); ++it) {
          glDeleteTextures(1, &it->second);
+         it->first->ChangedEvent().Detach(*this);
      }
 
      map<ICanvas*, GLuint>::iterator it2 = canvases.begin();
@@ -517,6 +528,32 @@ void GLContext::Handle(Shader::ChangedEventArg arg) {
     }
     glDeleteProgram(oldid);
     shaders[arg.shader] = newid;
+}
+
+void GLContext::Handle(Texture2DChangedEventArg arg) {
+    ITexture2D* texr = arg.resource.get();
+    //reload texture
+    GLuint texid = LookupTexture(texr);
+    glBindTexture(GL_TEXTURE_2D, texid);
+    CHECK_FOR_GL_ERROR();
+
+    // Setup texture parameters
+    SetupTexParameters(texr);
+
+    GLenum colorFormat = GLColorFormat(texr->GetColorFormat());
+
+    glTexSubImage2D(GL_TEXTURE_2D,
+                    0,
+                    arg.xOffset,
+                    arg.yOffset,
+                    texr->GetWidth(),
+                    texr->GetHeight(),
+                    colorFormat,
+                    texr->GetType(),
+                    texr->GetVoidDataPtr());
+    CHECK_FOR_GL_ERROR();
+    glBindTexture(GL_TEXTURE_2D, 0);
+
 }
 
 } // NS OpenGL

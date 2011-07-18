@@ -5,6 +5,8 @@ ADD_LIBRARY(Extensions_Renderers2
   Renderers2/OpenGL/GLRenderer.cpp
   Renderers2/OpenGL/RenderingView.h
   Renderers2/OpenGL/RenderingView.cpp
+  Renderers2/OpenGL/CanvasVisitor.h
+  Renderers2/OpenGL/CanvasVisitor.cpp
   Renderers2/OpenGL/LightVisitor.h
   Renderers2/OpenGL/LightVisitor.cpp
   Renderers2/OpenGL/GLContext.h
@@ -19,4 +21,6 @@ ADD_LIBRARY(Extensions_Renderers2
   Resources2/OpenGL/FXAAShader.cpp
   Display2/ICanvas.h
   Display2/Canvas3D.h
+  Display2/CompositeCanvas.h
+  Display2/CompositeCanvas.cpp
 )

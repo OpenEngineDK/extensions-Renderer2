@@ -7,8 +7,8 @@
 // See the GNU General Public License for more details (see LICENSE). 
 //--------------------------------------------------------------------
 
-#ifndef _INTERFACE_CANVAS_3D_H_
-#define _INTERFACE_CANVAS_3D_H_
+#ifndef _OE_CANVAS_3D_H_
+#define _OE_CANVAS_3D_H_
 
 #include <Display2/ICanvas.h>
 
@@ -78,23 +78,14 @@ public:
      */
     virtual ISceneNode* GetScene() const { return scene; }
 
-    /**
-     * Get canvas width.
-     *
-     * @return Canvas width
-     */
-    virtual unsigned int GetWidth() const { return width; }
+    virtual void Accept(ICanvasVisitor& visitor) { visitor.Visit(this); }
 
-    /**
-     * Get canvas height.
-     *
-     * @return Canvas height
-     */
-    virtual unsigned int GetHeight() const { return height; }
+    virtual unsigned int GetWidth() { return width; } 
+    virtual unsigned int GetHeight() { return height; } 
 
 };
 
 } // NS Display
 } // NS OpenEngine
 
-#endif // _INTERFACE_CANVAS_H_
+#endif // _OE_CANVAS_H_

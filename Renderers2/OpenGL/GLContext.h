@@ -10,7 +10,7 @@
 #ifndef _OE_OPENGL_CONTEXT_H_
 #define _OE_OPENGL_CONTEXT_H_
 
-#include <Resources/ITexture.h>
+#include <Resources/ITexture2D.h>
 #include <Resources/IDataBlock.h>
 #include <Resources2/Shader.h>
 #include <Meta/OpenGL.h>
@@ -18,16 +18,15 @@
 #include <map>
 
 namespace OpenEngine {
-    namespace Resources {
-        class ITexture2D;
-    }
     namespace Display2 {
         class ICanvas;
+        class Canvas2D;
     }
 namespace Renderers2 {
 namespace OpenGL {
 
 using Resources::ITexture2D;
+using Resources::Texture2DChangedEventArg;
 using Resources::IDataBlock;
 using Resources::BlockType;
 using Resources::Types::Type;
@@ -35,6 +34,7 @@ using Resources::UpdateMode;
 using Resources::ColorFormat;
 using Resources2::Shader;
 using Display2::ICanvas;
+using Display2::Canvas2D;
 using Core::IListener;
 using std::map;
 
@@ -50,7 +50,7 @@ enum GLSLVersion { GLSL_UNKNOWN, GLSL_NONE, GLSL_14, GLSL_20 };
  *
  * @class GLContext GLContext.h Renderers2/OpenGL/GLContext.h
  */
-class GLContext: public IListener<Shader::ChangedEventArg>  {
+class GLContext: public IListener<Shader::ChangedEventArg> , public IListener<Texture2DChangedEventArg> {
 private:
     GLSLVersion glslversion;
     bool init, fboSupport, vboSupport, shaderSupport;
@@ -76,6 +76,7 @@ public:
     bool ShaderSupport();
     
     GLuint LookupCanvas(ICanvas* can);
+    GLuint LookupCanvas(Canvas2D* can);
     GLuint LookupTexture(ITexture2D* tex);
     GLuint LookupVBO(IDataBlock* db);
     GLuint LookupShader(Shader* shad);
@@ -91,6 +92,7 @@ public:
     static unsigned int GLTypeSize(Type t);
 
     void Handle(Shader::ChangedEventArg arg);
+    void Handle(Texture2DChangedEventArg arg);
 };
 
 } // NS OpenGL

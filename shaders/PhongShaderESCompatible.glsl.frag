@@ -104,6 +104,7 @@ void main (void)
 #endif 
 
     gl_FragColor = color;
+    //gl_FragColor.rgb = gl_FragCoord.w * 200;
     //gl_FragColor.rgb = n; 
     //gl_FragColor.rgb = normalize(lightDir[0]);
 }

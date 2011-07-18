@@ -10,8 +10,30 @@
 #ifndef _OE_INTERFACE_CANVAS_H_
 #define _OE_INTERFACE_CANVAS_H_
 
+#include <Core/Exceptions.h>
+
 namespace OpenEngine {
 namespace Display2 {
+
+using Core::Exception;
+
+class ICanvas;
+class Canvas3D;
+class CompositeCanvas;
+class Canvas2D;
+
+class ICanvasVisitor {
+public:
+    virtual ~ICanvasVisitor() {};
+
+    virtual void Visit(ICanvas* canvas) {
+        throw Exception("Unknown Canvas type.");
+    }
+
+    virtual void Visit(Canvas3D* canvas) {}
+    virtual void Visit(CompositeCanvas* canvas) {}
+    virtual void Visit(Canvas2D* canvas) {}
+};
 
 /**
  * Canvas interface.
@@ -29,14 +51,21 @@ public:
      *
      * @return Canvas width
      */
-    virtual unsigned int GetWidth() const = 0;
+    virtual unsigned int GetWidth() = 0;
 
     /**
      * Get canvas height.
      *
      * @return Canvas height
      */
-    virtual unsigned int GetHeight() const = 0;
+    virtual unsigned int GetHeight() = 0;
+
+    /**
+     * Visitor pattern accept method
+     *
+     * @param the canvas visitor instance.
+     */
+    virtual void Accept(ICanvasVisitor& visitor) = 0;
 };
 
 } // NS Display

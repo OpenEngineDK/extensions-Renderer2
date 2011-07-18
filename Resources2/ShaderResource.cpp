@@ -37,6 +37,9 @@ ShaderResourcePtr ShaderResourcePlugin::CreateResource(string file) {
 
 ifstream& ShaderResourcePlugin::RequestResource(string filename, ShaderResource& shader) {
     // logger.info << "request file: " << filename << logger.end;
+
+    // @todo big problem if same resource is requested twice without
+    // releasing it first.
     ifstream* f = File::Open(filename);
     if (!locked) {
         events[filename].Detach(shader);
@@ -61,7 +64,6 @@ void ShaderResourcePlugin::ReleaseResource(string filename) {
 }
     
 void ShaderResourcePlugin::Detach(ShaderResource& shader) {
-    
     map<string, Event<ShaderResourcePlugin::ChangedEventArg> >::iterator it = events.begin();
     for (; it != events.end(); ++it) {
         it->second.Detach(shader);
@@ -108,7 +110,7 @@ ShaderResource::~ShaderResource() {
 string ShaderResource::LoadShader(vector<string> files) {
     string res;
     for (unsigned int i = 0; i < files.size(); ++i) {         
-        // @todo: try to reduce code duplication.
+        // @todo try to reduce code duplication.
         try { // assume relative path
             int sz = File::GetSize(dir + files[i]);
             char* buf = new char[sz];

@@ -21,11 +21,15 @@ namespace OpenEngine {
         class IViewingVolume;
     }
     namespace Display2 {
+        class ICanvas;
         class Canvas3D;
+        class CompositeCanvas;
     }
 namespace Renderers2 {
 namespace OpenGL {
 
+using Display2::ICanvas;
+using Display2::CompositeCanvas;
 using Display2::Canvas3D;
 using Utils::Time;
 using Core::IModule;
@@ -37,6 +41,7 @@ class GLContext;
 class GLRenderer;
 class RenderingView;
 class LightVisitor;
+class CanvasVisitor;
 
 class RenderingEventArg {
 public:
@@ -58,11 +63,12 @@ class GLRenderer :
 private:
     RGBAColor bgc;
     GLContext* ctx;
-    Canvas3D* canvas;
+    ICanvas* canvas;
     bool init;
 
     RenderingView* rv;
     LightVisitor* lv;
+    CanvasVisitor* cv;
 
     // Event lists for the rendering phases.
     Event<RenderingEventArg> initialize;
@@ -73,12 +79,14 @@ private:
 
     void ApplyViewingVolume(Display::IViewingVolume& volume);
 
+    Core::ProcessEventArg arg;
 public:
     GLRenderer(GLContext* ctx);
     virtual ~GLRenderer();
 
     // propably the only interface method for a renderer
-    void RenderScene(Canvas3D* canvas, Time start, unsigned int approx);
+    void Render(Canvas3D* canvas);
+    void Render(CompositeCanvas* canvas);
 
     void Handle(Core::InitializeEventArg arg);
     void Handle(Core::DeinitializeEventArg arg);
@@ -96,8 +104,8 @@ public:
     void SetBackgroundColor(RGBAColor color);
     RGBAColor GetBackgroundColor();
 
-    void SetCanvas(Canvas3D* canvas);
-    Canvas3D* GetCanvas();
+    void SetCanvas(ICanvas* canvas);
+    ICanvas* GetCanvas();
 
     GLContext* GetContext();
 
