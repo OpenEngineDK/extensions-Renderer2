@@ -36,8 +36,6 @@ using std::set;
  * @class CompositeCanvas CompositeCanvas.h Display2/CompositeCanvas.h
  */
 class CompositeCanvas: public ICanvas {
-protected:
-    unsigned int width, height;
 public:
     class Container {
     public:
@@ -50,8 +48,10 @@ public:
             : canvas(canvas), x(x), y(y), w(w), h(h), color(1.0f, 1.0f, 1.0f), opacity(1.0f) {}
     };
     typedef vector<Container>::iterator ContainerIterator;
-private:
+protected:
+    unsigned int width, height;
     vector<Container> canvases;
+private:
     set<ICanvas*> visited; //optimization: only visit duplicates once.
 public:
     CompositeCanvas(unsigned int width, unsigned int height);

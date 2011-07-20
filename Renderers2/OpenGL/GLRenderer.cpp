@@ -192,6 +192,10 @@ void GLRenderer::Handle(Core::InitializeEventArg arg) {
     this->initialize.Notify(RenderingEventArg(NULL, *this));
     //this->stage = RENDERER_PREPROCESS;
     CHECK_FOR_GL_ERROR();
+
+    // traverse scene graph to load gpu resource.
+    canvas->Accept(*cv);
+
     init = true;
 }
     
