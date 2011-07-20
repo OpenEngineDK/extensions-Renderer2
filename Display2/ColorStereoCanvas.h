@@ -26,10 +26,14 @@ private:
         CompositeCanvas::Container& c1 = AddCanvas(left, 0.0, 0.0);
         CompositeCanvas::Container& c2 = AddCanvas(right, 0.0, 0.0);
         
-        c1.color = RGBColor(0.0, 1.0, 1.0);
-        c2.color = RGBColor(1.0, 0.0, 0.0);
-        c1.opacity = 1.0;
-        c2.opacity = 0.5;
+        // c1.color = RGBColor(0.0, 1.0, 1.0);
+        // c2.color = RGBColor(1.0, 0.0, 0.0);
+        c1.greenMask = false;
+        c1.blueMask = false;
+        c2.redMask = false;
+
+        // c1.opacity = 1.0;
+        // c2.opacity = 0.5;
     }
 public:
     ColorStereoCanvas(unsigned int width, unsigned int height) 

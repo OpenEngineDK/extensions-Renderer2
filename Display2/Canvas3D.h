@@ -11,6 +11,7 @@
 #define _OE_CANVAS_3D_H_
 
 #include <Display2/ICanvas.h>
+#include <Math/RGBAColor.h>
 
 namespace OpenEngine {
     namespace Scene {
@@ -23,6 +24,7 @@ namespace Display2 {
    
 using Display::IViewingVolume;
 using Scene::ISceneNode;
+using Math::RGBAColor;
 
 /**
  * Canvas 3D
@@ -34,6 +36,7 @@ protected:
     unsigned int width, height;
     IViewingVolume* cam;
     ISceneNode* scene;
+    RGBAColor bgc;
 public:
     Canvas3D(unsigned int width, unsigned int height, ColorFormat format = Resources::RGB): 
         ICanvas(format),
@@ -84,6 +87,16 @@ public:
 
     virtual unsigned int GetWidth() { return width; } 
     virtual unsigned int GetHeight() { return height; } 
+
+    void SetBackgroundColor(RGBAColor color) {
+        bgc = color;
+    }
+    
+    RGBAColor GetBackgroundColor() {
+        return bgc;
+    }
+
+
 
 };
 

@@ -52,6 +52,14 @@ unsigned int CompositeCanvas::Size() {
     return canvases.size();
 }
 
+void CompositeCanvas::SetBackgroundColor(RGBAColor color) {
+    bgc = color;
+}
+    
+RGBAColor CompositeCanvas::GetBackgroundColor() {
+    return bgc;
+}
+
 
 } // NS Display
 } // NS OpenEngine

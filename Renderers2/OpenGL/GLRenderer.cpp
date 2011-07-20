@@ -59,8 +59,10 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
     glLoadIdentity();
 
     glViewport(0, 0, canvas->GetWidth(), canvas->GetHeight());
-    glClearColor(0.0, 0.0, 0.0, 1.0);
-    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    
+    RGBAColor bgc = canvas->GetBackgroundColor();
+    glClearColor(bgc[0], bgc[1], bgc[2], bgc[3]);
+    glClear(GL_COLOR_BUFFER_BIT);
     
     // glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glDisable(GL_DEPTH_TEST);
@@ -87,6 +89,7 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
 
     CompositeCanvas::ContainerIterator it = canvas->CanvasesBegin();
     for (; it != canvas->CanvasesEnd(); ++it) {        
+        glColorMask(it->redMask, it->greenMask, it->blueMask, it->alphaMask);
         const float w = it->w;
         const float h = it->h;
         const float x = it->x;
@@ -98,6 +101,7 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
             x + w, y
         };
         glVertexPointer(2, GL_FLOAT, 0, vert);
+        
 
         float col[16];
         it->color.ToArray(col);
@@ -126,12 +130,14 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
     glDisable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    glColorMask (GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glDisable(GL_BLEND);
 }
 
 void GLRenderer::Render(Canvas3D* canvas) {
     // logger.info << "render c3d: " << canvas << logger.end;
     // @todo: assert we are in preprocess stage
+    RGBAColor bgc = canvas->GetBackgroundColor();
     glClearColor(bgc[0], bgc[1], bgc[2], bgc[3]);
 
     // Clear the screen and the depth buffer.
@@ -226,14 +232,6 @@ IEvent<RenderingEventArg>& GLRenderer::PostProcessEvent() {
     
 IEvent<RenderingEventArg>& GLRenderer::DeinitializeEvent() {
     return deinitialize;
-}
-
-void GLRenderer::SetBackgroundColor(RGBAColor color) {
-    bgc = color;
-}
-    
-RGBAColor GLRenderer::GetBackgroundColor() {
-    return bgc;
 }
 
 void GLRenderer::SetCanvas(ICanvas* canvas) {

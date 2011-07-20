@@ -47,6 +47,17 @@ public:
     }
 
     virtual void SetScene(ISceneNode* scene) { left->SetScene(scene); right->SetScene(scene); }
+
+    virtual void SetBackgroundColor(RGBAColor color) {
+        left->SetBackgroundColor(color); 
+        right->SetBackgroundColor(color); 
+        bgc = color;
+    }
+    
+    virtual RGBAColor GetBackgroundColor() {
+        return bgc;
+    }
+
 };
 
 } // NS Display

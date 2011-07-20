@@ -61,7 +61,6 @@ public:
 class GLRenderer :
         public IModule {
 private:
-    RGBAColor bgc;
     GLContext* ctx;
     ICanvas* canvas;
     bool init;
@@ -100,9 +99,6 @@ public:
     IEvent<RenderingEventArg>& ProcessEvent();
     IEvent<RenderingEventArg>& PostProcessEvent();
     IEvent<RenderingEventArg>& DeinitializeEvent();
-
-    void SetBackgroundColor(RGBAColor color);
-    RGBAColor GetBackgroundColor();
 
     void SetCanvas(ICanvas* canvas);
     ICanvas* GetCanvas();

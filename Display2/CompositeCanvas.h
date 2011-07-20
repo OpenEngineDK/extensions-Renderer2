@@ -13,6 +13,7 @@
 #include <Display2/ICanvas.h>
 #include <Resources/ITexture2D.h>
 #include <Math/RGBColor.h>
+#include <Math/RGBAColor.h>
 
 #include <vector>
 #include <set>
@@ -22,6 +23,7 @@ namespace Display2 {
    
 using Resources::ITexture2DPtr;
 using Math::RGBColor;
+using Math::RGBAColor;
 using std::vector;
 using std::set;
 
@@ -44,13 +46,26 @@ public:
         unsigned int w, h;
         RGBColor color;
         float opacity;
+        bool redMask, greenMask, blueMask, alphaMask;
         Container(ICanvas* canvas, int x, int y, unsigned int w, unsigned int h)
-            : canvas(canvas), x(x), y(y), w(w), h(h), color(1.0f, 1.0f, 1.0f), opacity(1.0f) {}
+            : canvas(canvas) 
+            , x(x)
+            , y(y) 
+            , w(w) 
+            , h(h) 
+            , color(1.0f, 1.0f, 1.0f)
+            , opacity(1.0f)
+            , redMask(true)
+            , greenMask(true)
+            , blueMask(true)
+            , alphaMask(true)
+        {}
     };
     typedef vector<Container>::iterator ContainerIterator;
 protected:
     unsigned int width, height;
     vector<Container> canvases;
+    RGBAColor bgc;
 private:
     set<ICanvas*> visited; //optimization: only visit duplicates once.
 public:
@@ -59,7 +74,7 @@ public:
 
     virtual void Accept(ICanvasVisitor& visitor);
 
-    Container& AddCanvas(ICanvas* canvas, int x, int y);
+    Container& AddCanvas(ICanvas* canvas, int x = 0, int y = 0);
  
     ContainerIterator CanvasesBegin();
     ContainerIterator CanvasesEnd();
@@ -71,6 +86,8 @@ public:
 
     unsigned int Size();
 
+    virtual void SetBackgroundColor(RGBAColor color);
+    virtual RGBAColor GetBackgroundColor();
 };
 
 } // NS Display

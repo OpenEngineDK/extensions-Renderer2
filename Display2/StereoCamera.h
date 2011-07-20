@@ -40,7 +40,7 @@ private:
     
 public:
 
-    StereoCamera(): eyedist(.3), halfdist(0.5 * eyedist), left(new PerspectiveViewingVolume()), right(new PerspectiveViewingVolume()) {}
+    StereoCamera(): eyedist(5.0), halfdist(0.5 * eyedist), left(new PerspectiveViewingVolume()), right(new PerspectiveViewingVolume()) {}
 
     ~StereoCamera() {
         delete left;
