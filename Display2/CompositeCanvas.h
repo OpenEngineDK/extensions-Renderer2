@@ -12,6 +12,7 @@
 
 #include <Display2/ICanvas.h>
 #include <Resources/ITexture2D.h>
+#include <Math/RGBColor.h>
 
 #include <vector>
 #include <set>
@@ -20,6 +21,7 @@ namespace OpenEngine {
 namespace Display2 {
    
 using Resources::ITexture2DPtr;
+using Math::RGBColor;
 using std::vector;
 using std::set;
 
@@ -39,10 +41,13 @@ protected:
 public:
     class Container {
     public:
-        Container(ICanvas* canvas, int x, int y): canvas(canvas), x(x), y(y) {}
         ICanvas* canvas;
-        int x;
-        int y;
+        int x, y;
+        unsigned int w, h;
+        RGBColor color;
+        float opacity;
+        Container(ICanvas* canvas, int x, int y, unsigned int w, unsigned int h)
+            : canvas(canvas), x(x), y(y), w(w), h(h), color(1.0f, 1.0f, 1.0f), opacity(1.0f) {}
     };
     typedef vector<Container>::iterator ContainerIterator;
 private:
@@ -63,6 +68,8 @@ public:
 
     virtual unsigned int GetWidth() { return width; } 
     virtual unsigned int GetHeight() { return height; } 
+
+    unsigned int Size();
 
 };
 

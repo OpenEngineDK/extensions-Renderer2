@@ -215,8 +215,12 @@ GLuint GLContext::LoadCanvas(ICanvas* can) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
-                 can->GetWidth(), can->GetHeight(), 0, GL_RGB, 
+
+    GLint internalFormat = GLInternalColorFormat(can->GetColorFormat());
+    GLenum format = GLColorFormat(can->GetColorFormat());
+
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat,
+                 can->GetWidth(), can->GetHeight(), 0, format, 
                  GL_UNSIGNED_BYTE, NULL);
     CHECK_FOR_GL_ERROR();
 

@@ -25,14 +25,14 @@ void CompositeCanvas::Accept(ICanvasVisitor& visitor) {
 }
 
 CompositeCanvas::Container& CompositeCanvas::AddCanvas(ICanvas* canvas, int x, int y) {
-    canvases.push_back(CompositeCanvas::Container(canvas, x, y));
+    canvases.push_back(CompositeCanvas::Container(canvas, x, y, canvas->GetWidth(), canvas->GetHeight()));
     return canvases.at(canvases.size() - 1);
 }
 
 void CompositeCanvas::AcceptChildren(ICanvasVisitor& visitor) {
     visited.clear();
-    vector<CompositeCanvas::Container>::reverse_iterator it = canvases.rbegin();
-    for (; it != canvases.rend(); ++it) {
+    vector<CompositeCanvas::Container>::iterator it = canvases.begin();
+    for (; it != canvases.end(); ++it) {
         if (visited.find(it->canvas) == visited.end()) {
             it->canvas->Accept(visitor);
             visited.insert(it->canvas);
@@ -46,6 +46,10 @@ CompositeCanvas::ContainerIterator CompositeCanvas::CanvasesBegin() {
 
 CompositeCanvas::ContainerIterator CompositeCanvas::CanvasesEnd() {
     return canvases.end();
+}
+
+unsigned int CompositeCanvas::Size() {
+    return canvases.size();
 }
 
 

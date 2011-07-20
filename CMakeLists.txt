@@ -23,4 +23,6 @@ ADD_LIBRARY(Extensions_Renderers2
   Display2/Canvas3D.h
   Display2/CompositeCanvas.h
   Display2/CompositeCanvas.cpp
+  Display2/StereoCanvas.h
+  Display2/SplitStereoCanvas.h
 )

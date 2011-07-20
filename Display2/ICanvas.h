@@ -11,11 +11,13 @@
 #define _OE_INTERFACE_CANVAS_H_
 
 #include <Core/Exceptions.h>
+#include <Resources/ITexture.h>
 
 namespace OpenEngine {
 namespace Display2 {
 
 using Core::Exception;
+using Resources::ColorFormat;
 
 class ICanvas;
 class Canvas3D;
@@ -43,7 +45,11 @@ public:
  * @class ICanvas ICanvas.h Display2/ICanvas.h
  */
 class ICanvas {
+protected:
+    ColorFormat format;
 public:
+    ICanvas(ColorFormat format = Resources::RGB): format(format) {}
+    
     virtual ~ICanvas() {}
 
     /**
@@ -66,6 +72,10 @@ public:
      * @param the canvas visitor instance.
      */
     virtual void Accept(ICanvasVisitor& visitor) = 0;
+
+    virtual ColorFormat GetColorFormat() {
+        return format;
+    }
 };
 
 } // NS Display

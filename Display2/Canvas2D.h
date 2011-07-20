@@ -41,6 +41,10 @@ public:
     
     ITexture2DPtr GetTexture() { return texture; }
 
+    virtual ColorFormat GetColorFormat() {
+        return texture->GetColorFormat();
+    }
+
 };
 
 } // NS Display

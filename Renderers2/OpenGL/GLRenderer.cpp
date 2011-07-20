@@ -48,6 +48,7 @@ GLRenderer::~GLRenderer() {
 }
 
 void GLRenderer::Render(CompositeCanvas* canvas) {
+    // logger.info << "render composite: " << canvas << logger.end;
     canvas->AcceptChildren(*cv);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -60,22 +61,24 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
     glViewport(0, 0, canvas->GetWidth(), canvas->GetHeight());
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    
+    // glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_LIGHTING);
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
+    // glBlendFunc(GL_CONSTANT_COLOR, GL_ONE_MINUS_CONSTANT_ALPHA);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
+    glBlendEquation(GL_FUNC_ADD);
     const float texc[8] = {
-        0.0f, 0.0f, 
         0.0f, 1.0f,
-        1.0f, 1.0f,
-        1.0f, 0.0f
+        0.0f, 0.0f,
+        1.0f, 0.0f,
+        1.0f, 1.0f
     };
 
     glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
     glClientActiveTexture(GL_TEXTURE0);
     glActiveTexture(GL_TEXTURE0);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -84,17 +87,27 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
 
     CompositeCanvas::ContainerIterator it = canvas->CanvasesBegin();
     for (; it != canvas->CanvasesEnd(); ++it) {        
-        float x = it->x;
-        float y = it->y;
-        float w = it->canvas->GetWidth();
-        float h = it->canvas->GetHeight();
+        const float w = it->w;
+        const float h = it->h;
+        const float x = it->x;
+        const float y = canvas->GetHeight() - it->y;
         const float vert[8] = {
             x, y, 
-            x, y + h, 
-            x + w, y + h, 
+            x, y - h, 
+            x + w, y - h, 
             x + w, y
         };
         glVertexPointer(2, GL_FLOAT, 0, vert);
+
+        float col[16];
+        it->color.ToArray(col);
+        it->color.ToArray(&col[4]);
+        it->color.ToArray(&col[8]);
+        it->color.ToArray(&col[12]);
+        col[3] = col[7] = col[11] = col[15] =  it->opacity;
+        glColorPointer(4, GL_FLOAT, 0, col);
+        // glBlendColor(col[0], col[1], col[2], col[3]);
+
         glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(it->canvas));
         glDrawArrays(GL_QUADS, 0, 4);
         CHECK_FOR_GL_ERROR();
@@ -102,11 +115,13 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
 
     glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas));
     CHECK_FOR_GL_ERROR();
-    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
+    glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
+                     0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
     CHECK_FOR_GL_ERROR();
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     glDisable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
@@ -115,7 +130,7 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
 }
 
 void GLRenderer::Render(Canvas3D* canvas) {
-
+    // logger.info << "render c3d: " << canvas << logger.end;
     // @todo: assert we are in preprocess stage
     glClearColor(bgc[0], bgc[1], bgc[2], bgc[3]);
 
@@ -153,7 +168,8 @@ void GLRenderer::Render(Canvas3D* canvas) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas));
     CHECK_FOR_GL_ERROR();
-    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
+    glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
+                     0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
     CHECK_FOR_GL_ERROR();
     glBindTexture(GL_TEXTURE_2D, 0);
 }

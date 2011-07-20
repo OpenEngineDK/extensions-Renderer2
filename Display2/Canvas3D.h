@@ -35,10 +35,12 @@ protected:
     IViewingVolume* cam;
     ISceneNode* scene;
 public:
-    Canvas3D(unsigned int width, unsigned int height): 
+    Canvas3D(unsigned int width, unsigned int height, ColorFormat format = Resources::RGB): 
+        ICanvas(format),
         width(width), height(height), cam(NULL), scene(NULL) {}
 
-    Canvas3D(unsigned int width, unsigned int height, IViewingVolume* cam, ISceneNode* scene): 
+    Canvas3D(unsigned int width, unsigned int height, IViewingVolume* cam, ISceneNode* scene, ColorFormat format = Resources::RGB): 
+        ICanvas(format),
         width(width), height(height), cam(cam), scene(scene) {} 
     virtual ~Canvas3D() {}
 
