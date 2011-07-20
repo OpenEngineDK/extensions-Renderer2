@@ -419,7 +419,8 @@ GLuint GLContext::LoadShader(Shader* shad) {
         const int maxBufSize = 1024;
         char buffer[maxBufSize];
         glGetShaderInfoLog(vertexId, maxBufSize, &bufsize, buffer);
-        logger.error << "compile errors: " << buffer << logger.end;
+        logger.error << "compile errors:\n" << buffer << logger.end;
+        logger.error << "in shader:\n" << vertexShader << logger.end;
         throw Exception("Failed to compile vertex shader.");
     }
 #endif

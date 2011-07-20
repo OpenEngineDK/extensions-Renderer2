@@ -25,12 +25,18 @@ namespace OpenEngine {
         class Canvas3D;
         class CompositeCanvas;
     }
+
+    namespace Resources2 {
+        class Shader;
+        typedef boost::shared_ptr<Shader> ShaderPtr;
+    }
 namespace Renderers2 {
 namespace OpenGL {
 
 using Display2::ICanvas;
 using Display2::CompositeCanvas;
 using Display2::Canvas3D;
+using Resources2::ShaderPtr;
 using Utils::Time;
 using Core::IModule;
 using Core::IEvent;
@@ -79,6 +85,9 @@ private:
     void ApplyViewingVolume(Display::IViewingVolume& volume);
 
     Core::ProcessEventArg arg;
+    
+    ShaderPtr quadShader;
+    
 public:
     GLRenderer(GLContext* ctx);
     virtual ~GLRenderer();

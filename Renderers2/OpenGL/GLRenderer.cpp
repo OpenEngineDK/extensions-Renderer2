@@ -12,6 +12,8 @@
 #include <Renderers2/OpenGL/RenderingView.h>
 #include <Renderers2/OpenGL/LightVisitor.h>
 #include <Renderers2/OpenGL/CanvasVisitor.h>
+#include <Resources/ResourceManager.h>
+#include <Resources2/ShaderResource.h>
 
 #include <Renderers2/OpenGL/GLContext.h>
 #include <Display2/Canvas3D.h>
@@ -28,6 +30,9 @@ namespace OpenGL {
 using Display::IViewingVolume;
 
 using namespace Display2;
+using Resources::ResourceManager;
+using Resources2::ShaderResource;
+using Resources2::ShaderResourcePtr;
 using namespace Math;
 
 GLRenderer::GLRenderer(GLContext* ctx)
@@ -39,6 +44,10 @@ GLRenderer::GLRenderer(GLContext* ctx)
     , cv(new CanvasVisitor(*this))
     , arg(Core::ProcessEventArg(Time(), 0))
 {
+    ShaderResourcePtr srp = ResourceManager<ShaderResource>::Create("extensions/Renderer2/shaders/QuadShader.glsl");
+    srp->Load();
+    quadShader = srp;
+    
     preProcess.Attach(*lv);
     process.Attach(*rv);
 }
@@ -50,28 +59,18 @@ GLRenderer::~GLRenderer() {
 void GLRenderer::Render(CompositeCanvas* canvas) {
     // logger.info << "render composite: " << canvas << logger.end;
     canvas->AcceptChildren(*cv);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0.0, canvas->GetWidth(), 0.0, canvas->GetHeight(), 0.0, 1.0);
-    CHECK_FOR_GL_ERROR();
 
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+    glEnable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendEquation(GL_FUNC_ADD);
+    glActiveTexture(GL_TEXTURE0);
 
     glViewport(0, 0, canvas->GetWidth(), canvas->GetHeight());
-    
     RGBAColor bgc = canvas->GetBackgroundColor();
     glClearColor(bgc[0], bgc[1], bgc[2], bgc[3]);
     glClear(GL_COLOR_BUFFER_BIT);
     
-    // glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_LIGHTING);
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_BLEND);
-    // glBlendFunc(GL_CONSTANT_COLOR, GL_ONE_MINUS_CONSTANT_ALPHA);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glBlendEquation(GL_FUNC_ADD);
     const float texc[8] = {
         0.0f, 1.0f,
         0.0f, 0.0f,
@@ -79,44 +78,121 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
         1.0f, 1.0f
     };
 
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_COLOR_ARRAY);
-    glClientActiveTexture(GL_TEXTURE0);
-    glActiveTexture(GL_TEXTURE0);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glTexCoordPointer(2, GL_FLOAT, 0, texc);
-    CHECK_FOR_GL_ERROR();
+#if FIXED_FUNCTION
+    if (ctx->ShaderSupport() && false) {
+#endif
+        GLuint shaderId = ctx->LookupShader(quadShader.get());
+        glUseProgram(shaderId);
+        
+        const GLint vsLoc = glGetAttribLocation(shaderId, "vertex");
+        const GLint tcLoc = glGetAttribLocation(shaderId, "tcIn");
+        const GLint clLoc = glGetUniformLocation(shaderId, "color");
+        const GLint txLoc = glGetUniformLocation(shaderId, "texIn");
+        const GLint dimLoc = glGetUniformLocation(shaderId, "dims");
+                
+        glEnableVertexAttribArray(vsLoc);
+        glEnableVertexAttribArray(tcLoc);
+        CHECK_FOR_GL_ERROR();
+                    
+        glVertexAttribPointer(tcLoc, 2, GL_FLOAT, GL_FALSE, 0, texc);
+        CHECK_FOR_GL_ERROR();
 
-    CompositeCanvas::ContainerIterator it = canvas->CanvasesBegin();
-    for (; it != canvas->CanvasesEnd(); ++it) {        
-        glColorMask(it->redMask, it->greenMask, it->blueMask, it->alphaMask);
-        const float w = it->w;
-        const float h = it->h;
-        const float x = it->x;
-        const float y = canvas->GetHeight() - it->y;
-        const float vert[8] = {
-            x, y, 
-            x, y - h, 
-            x + w, y - h, 
-            x + w, y
-        };
-        glVertexPointer(2, GL_FLOAT, 0, vert);
+        glUniform2f(dimLoc, (float)canvas->GetWidth(), (float)canvas->GetHeight());
+        CHECK_FOR_GL_ERROR();
+
+        CompositeCanvas::ContainerIterator it = canvas->CanvasesBegin();
+        for (; it != canvas->CanvasesEnd(); ++it) { 
+            glColorMask(it->redMask, it->greenMask, it->blueMask, it->alphaMask);
+            const float w = it->w;
+            const float h = it->h;
+            const float x = it->x;
+            const float y = canvas->GetHeight() - it->y;
+            const float vert[8] = {
+                x, y, 
+                x, y - h, 
+                x + w, y - h, 
+                x + w, y
+            };
+            
+            float col[4];
+            it->color.ToArray(col);
+            col[3] = it->opacity;
+            glUniform4fv(clLoc, 1, col);
+            CHECK_FOR_GL_ERROR();
+
+            glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(it->canvas));
+            glUniform1i(txLoc, 0);
+            CHECK_FOR_GL_ERROR();
+
+            glVertexAttribPointer(vsLoc, 2, GL_FLOAT, GL_FALSE, 0, vert);            
+            CHECK_FOR_GL_ERROR();
+
+            glDrawArrays(GL_QUADS, 0, 4);
+            CHECK_FOR_GL_ERROR();
+        }
+
+        glDisableVertexAttribArray(vsLoc);
+        glDisableVertexAttribArray(tcLoc);
+
+#if FIXED_FUNCTION
+    }
+    else {
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(0.0, canvas->GetWidth(), 0.0, canvas->GetHeight(), 0.0, 1.0);
+        CHECK_FOR_GL_ERROR();
+
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+
+        glDisable(GL_LIGHTING);
+        glEnable(GL_TEXTURE_2D);
+
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glEnableClientState(GL_COLOR_ARRAY);
+        glClientActiveTexture(GL_TEXTURE0);
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+        glTexCoordPointer(2, GL_FLOAT, 0, texc);
+        CHECK_FOR_GL_ERROR();
+
+        CompositeCanvas::ContainerIterator it = canvas->CanvasesBegin();
+        for (; it != canvas->CanvasesEnd(); ++it) {        
+            glColorMask(it->redMask, it->greenMask, it->blueMask, it->alphaMask);
+            const float w = it->w;
+            const float h = it->h;
+            const float x = it->x;
+            const float y = canvas->GetHeight() - it->y;
+            const float vert[8] = {
+                x, y, 
+                x, y - h, 
+                x + w, y - h, 
+                x + w, y
+            };
+            glVertexPointer(2, GL_FLOAT, 0, vert);
         
 
-        float col[16];
-        it->color.ToArray(col);
-        it->color.ToArray(&col[4]);
-        it->color.ToArray(&col[8]);
-        it->color.ToArray(&col[12]);
-        col[3] = col[7] = col[11] = col[15] =  it->opacity;
-        glColorPointer(4, GL_FLOAT, 0, col);
-        // glBlendColor(col[0], col[1], col[2], col[3]);
+            float col[16];
+            it->color.ToArray(col);
+            it->color.ToArray(&col[4]);
+            it->color.ToArray(&col[8]);
+            it->color.ToArray(&col[12]);
+            col[3] = col[7] = col[11] = col[15] =  it->opacity;
+            glColorPointer(4, GL_FLOAT, 0, col);
 
-        glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(it->canvas));
-        glDrawArrays(GL_QUADS, 0, 4);
-        CHECK_FOR_GL_ERROR();
+            glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(it->canvas));
+            glDrawArrays(GL_QUADS, 0, 4);
+            CHECK_FOR_GL_ERROR();
+        }
+
+        glDisableClientState(GL_VERTEX_ARRAY);
+        glDisableClientState(GL_COLOR_ARRAY);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+        glDisable(GL_TEXTURE_2D);
     }
+#endif
 
+
+    // store resulting frame
     glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas));
     CHECK_FOR_GL_ERROR();
     glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
@@ -124,12 +200,7 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
     CHECK_FOR_GL_ERROR();
 
     glBindTexture(GL_TEXTURE_2D, 0);
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    glDisable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glColorMask (GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glDisable(GL_BLEND);
 }
@@ -170,7 +241,6 @@ void GLRenderer::Render(Canvas3D* canvas) {
     this->postProcess.Notify(rarg);
     // this->stage = RENDERER_PREPROCESS;
 
-    glClientActiveTexture(GL_TEXTURE0);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas));
     CHECK_FOR_GL_ERROR();
@@ -187,13 +257,15 @@ void GLRenderer::Handle(Core::InitializeEventArg arg) {
     CHECK_FOR_GL_ERROR();
     // Set perspective calculations to most accurate
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
+#if FIXED_FUNCTION
     glShadeModel(GL_SMOOTH);
     CHECK_FOR_GL_ERROR();
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     CHECK_FOR_GL_ERROR();
     GLfloat global_ambient[] = { 0.5f, 0.5f, 0.5f, 1.0f };
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
-
+#endif
     // this->stage = RENDERER_INITIALIZE;
     this->initialize.Notify(RenderingEventArg(NULL, *this));
     //this->stage = RENDERER_PREPROCESS;
@@ -243,6 +315,8 @@ ICanvas* GLRenderer::GetCanvas() {
 }
 
 void GLRenderer::ApplyViewingVolume(IViewingVolume& volume) {
+// @todo: consider moving this to the rendering view.
+#if FIXED_FUNCTION
     // Select The Projection Matrix
     glMatrixMode(GL_PROJECTION);
     CHECK_FOR_GL_ERROR();
@@ -272,6 +346,7 @@ void GLRenderer::ApplyViewingVolume(IViewingVolume& volume) {
     matrix.ToArray(f);
     glMultMatrixf(f);
     CHECK_FOR_GL_ERROR();
+#endif
 }
 
 GLContext* GLRenderer::GetContext() {

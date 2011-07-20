@@ -94,16 +94,6 @@ void RenderingView::ApplyRenderState(RenderStateNode* node) {
         glEnable(GL_CULL_FACE);
         CHECK_FOR_GL_ERROR();
     }
-
-    if (node->IsOptionEnabled(RenderStateNode::LIGHTING)) {
-        glEnable(GL_LIGHTING);
-        CHECK_FOR_GL_ERROR();
-    }
-    else if (node->IsOptionDisabled(RenderStateNode::LIGHTING)) {
-        glDisable(GL_LIGHTING);
-        CHECK_FOR_GL_ERROR();
-    }
-
     if (node->IsOptionEnabled(RenderStateNode::DEPTH_TEST)) {
         glEnable(GL_DEPTH_TEST);
         CHECK_FOR_GL_ERROR();
@@ -112,7 +102,16 @@ void RenderingView::ApplyRenderState(RenderStateNode* node) {
         glDisable(GL_DEPTH_TEST);
         CHECK_FOR_GL_ERROR();
     }
-    
+
+#if FIXED_FUNCTION
+    if (node->IsOptionEnabled(RenderStateNode::LIGHTING)) {
+        glEnable(GL_LIGHTING);
+        CHECK_FOR_GL_ERROR();
+    }
+    else if (node->IsOptionDisabled(RenderStateNode::LIGHTING)) {
+        glDisable(GL_LIGHTING);
+        CHECK_FOR_GL_ERROR();
+    }
     if (node->IsOptionEnabled(RenderStateNode::COLOR_MATERIAL)) {
         glEnable(GL_COLOR_MATERIAL);
         CHECK_FOR_GL_ERROR();
@@ -131,6 +130,7 @@ void RenderingView::ApplyRenderState(RenderStateNode* node) {
         renderShader = true;
     else if (node->IsOptionDisabled(RenderStateNode::SHADER))
         renderShader = false;
+#endif
 
     // if (node->IsOptionEnabled(RenderStateNode::BINORMAL))
     //     renderBinormal = true;
@@ -190,16 +190,22 @@ void RenderingView::VisitTransformationNode(TransformationNode* node) {
     Matrix<4,4,float> oldMv = modelViewMatrix;
     modelViewMatrix = m * modelViewMatrix;
 
+#if FIXED_FUNCTION
     float f[16];
     m.ToArray(f);
     glPushMatrix();
     glMultMatrixf(f);
     CHECK_FOR_GL_ERROR();
+#endif
+
     node->VisitSubNodes(*this);
     CHECK_FOR_GL_ERROR();
+
+#if FIXED_FUNCTION
     glPopMatrix();
     CHECK_FOR_GL_ERROR();
-
+#endif
+    
     modelViewMatrix = oldMv;
 }
 
@@ -331,9 +337,6 @@ void UnbindTextures2D(Shader* shad, GLint id) {
  */
 void RenderingView::VisitMeshNode(MeshNode* node) {
     Mesh* mesh = node->GetMesh().get();
-    GeometrySet* geom = mesh->GetGeometrySet().get();
-    Material* mat = mesh->GetMaterial().get();
-
     // index buffer
     IDataBlock* indices = mesh->indices.get();
 
@@ -344,7 +347,9 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
     GLuint shaderId;
     PhongShader* shad;
     // material
+#if FIXED_FUNCTION
     if (renderShader && ctx->ShaderSupport()) {        
+#endif
         // for now we simply rebind everything in each lookup
         // todo: optimize to only rebind when needed (event driven rebinding).
         // todo: optimize by caching locations
@@ -385,7 +390,13 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
         node->VisitSubNodes(*this);
         CHECK_FOR_GL_ERROR();
         return; // no fixed function stuff if shader is supported!
+
+#if FIXED_FUNCTION
+
     }
+
+    GeometrySet* geom = mesh->GetGeometrySet().get();
+    Material* mat = mesh->GetMaterial().get();
     
     // Fixed function stuff from here on (remove code for ES support)
     if (renderTexture && mat->Get2DTextures().size() > 0) {
@@ -487,6 +498,7 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
     CHECK_FOR_GL_ERROR();
 
     node->VisitSubNodes(*this);
+#endif
 }
 
 } // NS OpenGL

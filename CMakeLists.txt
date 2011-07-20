@@ -1,3 +1,7 @@
+# Enable or disable OpenGL fixed function pipeline support
+# disable for OpenGL ES 2.0 compatibility
+
+ADD_DEFINITIONS(-DFIXED_FUNCTION)
 
 # Create the extension library
 ADD_LIBRARY(Extensions_Renderers2
