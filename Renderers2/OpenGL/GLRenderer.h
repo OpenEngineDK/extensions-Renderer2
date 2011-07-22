@@ -27,8 +27,8 @@ namespace OpenEngine {
     }
 
     namespace Resources2 {
-        class Shader;
-        typedef boost::shared_ptr<Shader> ShaderPtr;
+        class ShaderResource;
+        typedef boost::shared_ptr<ShaderResource> ShaderResourcePtr;
     }
 namespace Renderers2 {
 namespace OpenGL {
@@ -36,7 +36,7 @@ namespace OpenGL {
 using Display2::ICanvas;
 using Display2::CompositeCanvas;
 using Display2::Canvas3D;
-using Resources2::ShaderPtr;
+using Resources2::ShaderResourcePtr;
 using Utils::Time;
 using Core::IModule;
 using Core::IEvent;
@@ -86,7 +86,7 @@ private:
 
     Core::ProcessEventArg arg;
     
-    ShaderPtr quadShader;
+    ShaderResourcePtr quadShader;
     
 public:
     GLRenderer(GLContext* ctx);

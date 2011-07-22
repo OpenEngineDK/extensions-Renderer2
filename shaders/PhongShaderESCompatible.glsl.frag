@@ -17,7 +17,7 @@ struct Material {
 
 uniform Material frontMaterial;
 uniform LightSource lightSource[NUM_LIGHTS];
-uniform float4 globalAmbient;
+uniform vec4 globalAmbient;
 
 varying vec3 norm, eyeVec;
 varying vec3 lightDir[NUM_LIGHTS];

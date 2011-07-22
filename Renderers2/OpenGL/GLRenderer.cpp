@@ -44,9 +44,8 @@ GLRenderer::GLRenderer(GLContext* ctx)
     , cv(new CanvasVisitor(*this))
     , arg(Core::ProcessEventArg(Time(), 0))
 {
-    ShaderResourcePtr srp = ResourceManager<ShaderResource>::Create("extensions/Renderer2/shaders/QuadShader.glsl");
-    srp->Load();
-    quadShader = srp;
+    quadShader = ResourceManager<ShaderResource>::Create("extensions/Renderer2/shaders/QuadShader.glsl");
+    quadShader->Load();
     
     preProcess.Attach(*lv);
     process.Attach(*rv);
@@ -79,7 +78,7 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
     };
 
 #if FIXED_FUNCTION
-    if (ctx->ShaderSupport() && false) {
+    if (ctx->ShaderSupport()) {
 #endif
         GLuint shaderId = ctx->LookupShader(quadShader.get());
         glUseProgram(shaderId);
@@ -156,7 +155,7 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
         CHECK_FOR_GL_ERROR();
 
         CompositeCanvas::ContainerIterator it = canvas->CanvasesBegin();
-        for (; it != canvas->CanvasesEnd(); ++it) {        
+        for (; it != canvas->CanvasesEnd(); ++it) { 
             glColorMask(it->redMask, it->greenMask, it->blueMask, it->alphaMask);
             const float w = it->w;
             const float h = it->h;
@@ -190,7 +189,6 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
         glDisable(GL_TEXTURE_2D);
     }
 #endif
-
 
     // store resulting frame
     glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas));
