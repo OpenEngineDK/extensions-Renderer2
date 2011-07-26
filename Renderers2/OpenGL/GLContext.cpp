@@ -348,8 +348,9 @@ GLuint GLContext::LoadVBO(IDataBlock* db) {
         
     glBufferData(db->GetBlockType(), 
                  size,
-                 db->GetVoidDataPtr(), access);
-        
+                 db->GetVoidDataPtr(), access); 
+    glBindBuffer(db->GetBlockType(), 0);
+   
     if (db->GetUnloadPolicy() == UNLOAD_AUTOMATIC)
         db->Unload();
     return id;
@@ -360,6 +361,7 @@ GLuint GLContext::LookupVBO(IDataBlock* db) {
     if (it != vbos.end())
         return (*it).second;
     GLuint id = LoadVBO(db);
+    db->ChangedEvent().Attach(*this);
     vbos[db] = id;
     return id;
 }
@@ -494,6 +496,7 @@ void GLContext::ReleaseVBOs() {
     map<IDataBlock*, GLuint>::iterator it = vbos.begin();
     for (; it != vbos.end(); ++it) {
         glDeleteBuffers(1, &it->second);
+        it->first->ChangedEvent().Detach(*this);
     }
     vbos.clear();
 }
@@ -514,6 +517,7 @@ void GLContext::ReleaseShaders() {
 }
 
 void GLContext::Handle(Shader::ChangedEventArg arg) {
+    // logger.info << "shader changed" << logger.end;
     GLuint newid;
     try {
         newid = LoadShader(arg.shader);
@@ -560,6 +564,25 @@ void GLContext::Handle(Texture2DChangedEventArg arg) {
     glBindTexture(GL_TEXTURE_2D, 0);
 
 }
+
+void GLContext::Handle(IDataBlockChangedEventArg arg) {    
+    IDataBlock* bo = arg.resource.get();
+    GLuint id = bo->GetID();
+    
+    glBindBuffer(bo->GetBlockType(), id);
+    CHECK_FOR_GL_ERROR();
+        
+    unsigned int size = GLTypeSize(bo->GetType()) * bo->GetSize() * bo->GetDimension();
+    GLenum access = GLAccessType(bo->GetBlockType(), bo->GetUpdateMode());
+    glBufferData(bo->GetBlockType(), 
+                 size,
+                 bo->GetVoidDataPtr(), access);
+    glBindBuffer(bo->GetBlockType(), 0);
+    
+    if (bo->GetUnloadPolicy() == UNLOAD_AUTOMATIC)
+        bo->Unload();
+}
+
 
 } // NS OpenGL
 } // NS Renderers

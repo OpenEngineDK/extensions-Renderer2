@@ -27,6 +27,7 @@ namespace OpenGL {
 
 using Resources::ITexture2D;
 using Resources::Texture2DChangedEventArg;
+using Resources::IDataBlockChangedEventArg;
 using Resources::IDataBlock;
 using Resources::BlockType;
 using Resources::Types::Type;
@@ -50,7 +51,9 @@ enum GLSLVersion { GLSL_UNKNOWN, GLSL_NONE, GLSL_14, GLSL_20 };
  *
  * @class GLContext GLContext.h Renderers2/OpenGL/GLContext.h
  */
-class GLContext: public IListener<Shader::ChangedEventArg> , public IListener<Texture2DChangedEventArg> {
+class GLContext: public IListener<Shader::ChangedEventArg>
+               , public IListener<Texture2DChangedEventArg> 
+               , public IListener<IDataBlockChangedEventArg> {
 private:
     GLSLVersion glslversion;
     bool init, fboSupport, vboSupport, shaderSupport;
@@ -93,6 +96,7 @@ public:
 
     void Handle(Shader::ChangedEventArg arg);
     void Handle(Texture2DChangedEventArg arg);
+    void Handle(IDataBlockChangedEventArg arg);
 };
 
 } // NS OpenGL
