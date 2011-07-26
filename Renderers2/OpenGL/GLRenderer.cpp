@@ -130,6 +130,7 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
             CHECK_FOR_GL_ERROR();
         }
 
+        glUseProgram(0);
         glDisableVertexAttribArray(vsLoc);
         glDisableVertexAttribArray(tcLoc);
 
