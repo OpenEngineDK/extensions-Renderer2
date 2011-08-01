@@ -29,12 +29,12 @@ attribute vec3 normal;
 attribute vec3 tangent, bitangent;
 
 #ifdef USE_TEXTURES
+varying vec2 uv[NUM_TEXTURES];
 #ifdef ONE_TEXTURE
 attribute vec2 texCoord;
 #else
 attribute vec2 texCoord[NUM_TEXTURES];
 #endif
-varying vec2 uv[NUM_TEXTURES];
 #endif
 
 uniform mat4 modelViewMatrix, modelViewProjectionMatrix;

@@ -144,18 +144,26 @@ PhongShader::PhongShader(Mesh* mesh)
 
     Resources::IDataBlockList tcs = mesh->GetGeometrySet()->GetTexCoords();
     Resources::IDataBlockList::iterator itr2 = tcs.begin();
-    unsigned int count = 0;
-    for (; itr2 != tcs.end(); ++itr2) {
-        SetAttribute("texCoord[" + Utils::Convert::ToString<unsigned int>(count) + "]", *itr2);        
-        ++count;
-    }
 
+    
+    unsigned int count = 0;
+
+    if (tcs.size() == 1) {
+        SetAttribute("texCoord", *itr2);        
+        count = 1;
+    }
+    else {
+        for (; itr2 != tcs.end(); ++itr2) {
+            SetAttribute("texCoord[" + Utils::Convert::ToString<unsigned int>(count) + "]", *itr2);
+            ++count;
+        }
+    }
     if (count > 0) {
         AddDefine("USE_TEXTURES");
-        if (count > 1)
-            AddDefine("NUM_TEXTURES", count);
-        else
-            AddDefine("ONE_TEXTURE");            
+        AddDefine("NUM_TEXTURES", count);
+        if (count == 1) {
+            AddDefine("ONE_TEXTURE");
+        }
     }
     
     if (!(bump && tans && bitans)) {
