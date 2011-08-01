@@ -22,7 +22,10 @@ uniform vec4 globalAmbient;
 varying vec3 norm, eyeVec;
 varying vec3 lightDir[NUM_LIGHTS];
 varying float dist[NUM_LIGHTS];
-varying vec2 texCoord[6];
+
+#ifdef USE_TEXTURES
+varying vec2 uv[NUM_TEXTURES];
+#endif
 
 uniform sampler2D ambientMap, diffuseMap, specularMap, opacityMap;
 uniform sampler2D bumpMap;
@@ -31,7 +34,7 @@ uniform sampler2D bumpMap;
 void main (void)
 {
 #ifdef BUMP_MAP
-    vec3 n = normalize(texture2D(bumpMap, texCoord[BUMP_INDEX].st).xyz * 2.0 - 1.0);
+    vec3 n = normalize(texture2D(bumpMap, uv[BUMP_INDEX].st).xyz * 2.0 - 1.0);
 #else
     vec3 n = normalize(norm);
 #endif  
@@ -39,13 +42,13 @@ void main (void)
     vec4 color = 
         globalAmbient * 
 #ifdef AMBIENT_MAP
-        texture2D(ambientMap, texCoord[AMBIENT_INDEX].st);
+        texture2D(ambientMap, uv[AMBIENT_INDEX].st);
 #else
         frontMaterial.ambient;
 #endif
 
 #ifdef OPACITY_MAP  
-    if (texture2D(opacityMap, texCoord[OPACITY_INDEX].st).a < .5) 
+    if (texture2D(opacityMap, uv[OPACITY_INDEX].st).a < .5) 
         discard;
 #endif 
 
@@ -60,7 +63,7 @@ void main (void)
 
         color +=
 #ifdef AMBIENT_MAP
-            texture2D(ambientMap, texCoord[AMBIENT_INDEX].st) *
+            texture2D(ambientMap, uv[AMBIENT_INDEX].st) *
 #else
             frontMaterial.ambient *
 #endif
@@ -77,7 +80,7 @@ void main (void)
                     lightSource[i].diffuse *
 
 #ifdef DIFFUSE_MAP
- //                    texture2D(diffuseMap, texCoord[DIFFUSE_INDEX].st) *
+ //                    texture2D(diffuseMap, uv[DIFFUSE_INDEX].st) *
 #else
                     frontMaterial.diffuse *
 #endif
@@ -90,7 +93,7 @@ void main (void)
                     att *
                     lightSource[i].specular *
 #ifdef SPECULAR_MAP
-                    texture2D(specularMap, texCoord[DIFFUSE_INDEX].st) *
+                    texture2D(specularMap, uv[DIFFUSE_INDEX].st) *
 #else
                     frontMaterial.specular *
 #endif
@@ -100,7 +103,7 @@ void main (void)
 #ifdef DIFFUSE_MAP  
     // Weight the final color with the diffuse map.
     // This resembles the gl fixed function pipeline way.
-    color *= texture2D(diffuseMap, texCoord[DIFFUSE_INDEX].st);
+    color *= texture2D(diffuseMap, uv[DIFFUSE_INDEX].st);
 #endif 
 
     gl_FragColor = color;

@@ -93,8 +93,6 @@ PhongShader::PhongShader(Mesh* mesh)
     // delete buf;
     // delete f;
 
-    AddDefine("NUM_LIGHTS", 1);
-
     // concatenate shaders with defines
     if (ambient) {
         AddDefine("AMBIENT_MAP");
@@ -108,7 +106,6 @@ PhongShader::PhongShader(Mesh* mesh)
         AddDefine("DIFFUSE_MAP");
         AddDefine("DIFFUSE_INDEX", mat->GetUVIndex(diffuse));
         SetTexture2D("diffuseMap", diffuse);
-        
         // logger.info << "diffuse index: " << mat->GetUVIndex(diffuse) << logger.end;
     }
 
@@ -135,14 +132,29 @@ PhongShader::PhongShader(Mesh* mesh)
         // logger.info << "opacity index: " << mat->GetUVIndex(diffuse) << logger.end;
     }
 
+    AddDefine("NUM_LIGHTS", 1);
+
     map<string, IDataBlockPtr> attribs = mesh->GetGeometrySet()->GetAttributeLists();
-    map<string, IDataBlockPtr>::iterator itr = attribs.begin();
+    map<string, IDataBlockPtr>::iterator itr1 = attribs.begin();
     
-    for (; itr != attribs.end(); ++itr) {
+    for (; itr1 != attribs.end(); ++itr1) {
         // logger.info << "attrib: " << itr->first << logger.end;
-        SetAttribute(itr->first, itr->second);
+        SetAttribute(itr1->first, itr1->second);
     }
 
+    Resources::IDataBlockList tcs = mesh->GetGeometrySet()->GetTexCoords();
+    Resources::IDataBlockList::iterator itr2 = tcs.begin();
+    unsigned int count = 0;
+    for (; itr2 != tcs.end(); ++itr2) {
+        SetAttribute("texCoord[" + Utils::Convert::ToString<unsigned int>(count) + "]", *itr2);        
+        ++count;
+    }
+
+    if (count > 0) {
+        AddDefine("USE_TEXTURES");
+        AddDefine("NUM_TEXTURES", count);
+    }
+    
     if (!(bump && tans && bitans)) {
         UnsetAttribute("tangent");
         UnsetAttribute("bitangent");

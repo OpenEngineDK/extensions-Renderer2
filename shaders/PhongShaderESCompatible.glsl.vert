@@ -28,13 +28,10 @@ attribute vec3 normal;
 //attribute vec3 color;
 attribute vec3 tangent, bitangent;
 
-attribute vec2 texCoord0;
-attribute vec2 texCoord1;
-attribute vec2 texCoord2;
-attribute vec2 texCoord3;
-attribute vec2 texCoord4;
-attribute vec2 texCoord5;
-varying vec2 texCoord[6];
+#ifdef USE_TEXTURES
+attribute vec2 texCoord[NUM_TEXTURES];
+varying vec2 uv[NUM_TEXTURES];
+#endif
 
 uniform mat4 modelViewMatrix, modelViewProjectionMatrix;
 uniform mat3 normalMatrix;
@@ -81,13 +78,11 @@ void main()
     }
 
     // interpolate texture coordinates
-    texCoord[0] = texCoord0;
-    texCoord[1] = texCoord1; 
-    texCoord[2] = texCoord2; 
-    texCoord[3] = texCoord3; 
-    texCoord[4] = texCoord4; 
-    texCoord[5] = texCoord5; 
-
+#ifdef USE_TEXTURES
+    for (int i = 0; i < NUM_TEXTURES; ++i) {
+        uv[i] = texCoord[i];
+    }
+#endif
     gl_Position = modelViewProjectionMatrix * vec4(vertex, 1.0);
     norm = n;
 }
