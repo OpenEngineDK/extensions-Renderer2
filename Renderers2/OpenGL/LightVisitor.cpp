@@ -44,18 +44,24 @@ void LightVisitor::VisitTransformationNode(TransformationNode* node) {
     Matrix<4,4,float> oldMv = modelViewMatrix;
     modelViewMatrix = m * modelViewMatrix;
 
+#if FIXED_FUNCTION
     float f[16];
     m.ToArray(f);
     glPushMatrix();
     glMultMatrixf(f);
+#endif
+
     node->VisitSubNodes(*this);
+#if FIXED_FUNCTION
     glPopMatrix();
     CHECK_FOR_GL_ERROR();
+#endif
 
     modelViewMatrix = oldMv;
 }
     
 void LightVisitor::VisitDirectionalLightNode(DirectionalLightNode* node) {
+#if FIXED_FUNCTION
 #if OE_SAFE
     GLint max;
     glGetIntegerv(GL_MAX_LIGHTS, &max);
@@ -72,6 +78,8 @@ void LightVisitor::VisitDirectionalLightNode(DirectionalLightNode* node) {
     node->specular.ToArray(color);
     glLightfv(light, GL_SPECULAR, color);
     glEnable(light);
+    CHECK_FOR_GL_ERROR();
+#endif
     
     LightSource l;
     l.position = (modelViewMatrix.GetTranspose() * Vector<4,float>(0.0, -1.0, 0.0, 0.0)).GetNormalize();        
@@ -81,11 +89,11 @@ void LightVisitor::VisitDirectionalLightNode(DirectionalLightNode* node) {
     lights.insert(lights.end(), l);
 
     count++;
-    CHECK_FOR_GL_ERROR();
     node->VisitSubNodes(*this);            
 }
     
 void LightVisitor::VisitPointLightNode(PointLightNode* node) {
+#if FIXED_FUNCTION
 #if OE_SAFE
     GLint max;
     glGetIntegerv(GL_MAX_LIGHTS, &max);
@@ -105,6 +113,8 @@ void LightVisitor::VisitPointLightNode(PointLightNode* node) {
     glLightf(light, GL_LINEAR_ATTENUATION, node->linearAtt);
     glLightf(light, GL_QUADRATIC_ATTENUATION, node->quadAtt);
     glEnable(light);
+    CHECK_FOR_GL_ERROR();
+#endif
 
     LightSource l;
     l.position = (modelViewMatrix.GetTranspose() * Vector<4,float>(0.0, 0.0, 0.0, 1.0));
@@ -117,12 +127,12 @@ void LightVisitor::VisitPointLightNode(PointLightNode* node) {
     lights.insert(lights.end(), l);
 
     ++count;
-    CHECK_FOR_GL_ERROR();
     node->VisitSubNodes(*this);
 
 }
 
 void LightVisitor::VisitSpotLightNode(SpotLightNode* node) {
+#if FIXED_FUNCTION
 #if OE_SAFE
     GLint max;
     glGetIntegerv(GL_MAX_LIGHTS, &max);
@@ -145,6 +155,8 @@ void LightVisitor::VisitSpotLightNode(SpotLightNode* node) {
     glLightf(light, GL_LINEAR_ATTENUATION, node->linearAtt);
     glLightf(light, GL_QUADRATIC_ATTENUATION, node->quadAtt);
     glEnable(light);
+    CHECK_FOR_GL_ERROR();
+#endif
     
     LightSource l;
     l.position = (modelViewMatrix.GetTranspose() * Vector<4,float>(0.0, 0.0, 0.0, 1.0));
@@ -162,7 +174,6 @@ void LightVisitor::VisitSpotLightNode(SpotLightNode* node) {
     lights.insert(lights.end(), l);
 
     ++count;
-    CHECK_FOR_GL_ERROR();
     node->VisitSubNodes(*this);            
 }
 
@@ -174,14 +185,20 @@ void LightVisitor::Handle(RenderingEventArg arg) {
         throw new Exception("Scene was NULL in LightVisitor.");
     #endif
     count = 0;
+
+#if FIXED_FUNCTION
     glMatrixMode(GL_MODELVIEW);
+#endif
+
     arg.canvas->GetScene()->Accept(*this);
+#if FIXED_FUNCTION
     GLint max;
     glGetIntegerv(GL_MAX_LIGHTS, &max);
     for (int i = count; i < max; ++i) {
         glDisable(GL_LIGHT0 + i);
         CHECK_FOR_GL_ERROR();
     }
+#endif
 }
 
 vector<LightVisitor::LightSource> LightVisitor::GetLights() {
