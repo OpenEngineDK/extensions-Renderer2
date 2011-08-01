@@ -152,7 +152,10 @@ PhongShader::PhongShader(Mesh* mesh)
 
     if (count > 0) {
         AddDefine("USE_TEXTURES");
-        AddDefine("NUM_TEXTURES", count);
+        if (count > 1)
+            AddDefine("NUM_TEXTURES", count);
+        else
+            AddDefine("ONE_TEXTURE");            
     }
     
     if (!(bump && tans && bitans)) {

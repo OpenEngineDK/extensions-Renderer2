@@ -29,7 +29,11 @@ attribute vec3 normal;
 attribute vec3 tangent, bitangent;
 
 #ifdef USE_TEXTURES
+#ifdef ONE_TEXTURE
+attribute vec2 texCoord;
+#else
 attribute vec2 texCoord[NUM_TEXTURES];
+#endif
 varying vec2 uv[NUM_TEXTURES];
 #endif
 
@@ -79,9 +83,13 @@ void main()
 
     // interpolate texture coordinates
 #ifdef USE_TEXTURES
+#ifdef ONE_TEXTURE
+    uv[0] = texCoord;
+#else
     for (int i = 0; i < NUM_TEXTURES; ++i) {
         uv[i] = texCoord[i];
     }
+#endif
 #endif
     gl_Position = modelViewProjectionMatrix * vec4(vertex, 1.0);
     norm = n;
