@@ -29,6 +29,9 @@ varying vec2 uv[NUM_TEXTURES];
 
 uniform sampler2D ambientMap, diffuseMap, specularMap, opacityMap;
 uniform sampler2D bumpMap;
+uniform samplerCube cubeMap;
+
+uniform mat3 inverseNormalMatrix;
 
 //#undef BUMP_MAP
 void main (void)
@@ -39,8 +42,15 @@ void main (void)
     vec3 n = normalize(norm);
 #endif  
     
+    vec3 e = normalize(eyeVec);
+#ifdef CUBE_MAP
+    vec3 rEnv = reflect(e,n);
+#endif
+
+
     vec4 color = 
         globalAmbient * 
+
 #ifdef AMBIENT_MAP
         texture2D(ambientMap, uv[AMBIENT_INDEX].st);
 #else
@@ -52,6 +62,7 @@ void main (void)
         discard;
 #endif 
 
+        
     for (int i = 0; i < NUM_LIGHTS; ++i) {
         float att = 1.0;
         if (lightSource[i].position.w == 1.0) {// if point light
@@ -70,7 +81,7 @@ void main (void)
             lightSource[i].ambient;
 
         vec3 l = normalize(lightDir[i]);
-        vec3 e = normalize(eyeVec);
+
 
         float lambertTerm = dot(n,l);
         if (lambertTerm > 0.0)
@@ -80,24 +91,34 @@ void main (void)
                     lightSource[i].diffuse *
 
 #ifdef DIFFUSE_MAP
- //                    texture2D(diffuseMap, uv[DIFFUSE_INDEX].st) *
+                    texture2D(diffuseMap, uv[DIFFUSE_INDEX].st) *
 #else
                     frontMaterial.diffuse *
 #endif
+#ifdef CUBE_MAP
+                    //textureCube(cubeMap, inverseNormalMatrix * rEnv) *
+#endif
                     lambertTerm;
                 
-                vec3 r = reflect(-l, n);
+                vec3 r = reflect(-l, n); 
+
                 float specular = pow(max(dot(r, e), 0.0),
                                      frontMaterial.shininess);
                 color +=
                     att *
                     lightSource[i].specular *
+
+#ifdef CUBE_MAP
+                    textureCube(cubeMap, inverseNormalMatrix * rEnv) * 1.0 *
+#endif
 #ifdef SPECULAR_MAP
                     texture2D(specularMap, uv[DIFFUSE_INDEX].st) *
 #else
                     frontMaterial.specular *
 #endif
                     specular;
+
+
             }
     }
 #ifdef DIFFUSE_MAP  
@@ -105,6 +126,9 @@ void main (void)
     // This resembles the gl fixed function pipeline way.
     color *= texture2D(diffuseMap, uv[DIFFUSE_INDEX].st);
 #endif 
+#ifdef CUBE_MAP
+    color += textureCube(cubeMap, inverseNormalMatrix * rEnv) * globalAmbient;
+#endif
 
     gl_FragColor = color;
     //gl_FragColor.rgb = gl_FragCoord.w * 200;

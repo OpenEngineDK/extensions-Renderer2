@@ -73,6 +73,14 @@ void RenderingView::Handle(RenderingEventArg arg) {
     // setup default render state
     ApplyRenderState(currentRenderState);
     arg.canvas->GetScene()->Accept(*this);
+    
+    // process transparent meshes
+    vector<RenderObject>::iterator it = transparencyQueue.begin();
+    for (; it != transparencyQueue.end(); ++it) {
+        RenderMesh(it->mesh, it->modelViewMatrix);
+    }         
+    transparencyQueue.clear();
+
     ctx = NULL;
 }
             
@@ -213,11 +221,11 @@ void RenderingView::BindUniforms(Shader* shad, GLint id) {
     Shader::UniformIterator it = shad->UniformsBegin();
     for (; it != shad->UniformsEnd(); ++it) {
         GLint loc = glGetUniformLocation(id, (*it).first.c_str());
-#if OE_SAFE
-        if (loc == -1) throw Exception(string("Uniform location not found: ") + it->first);
-#endif
+// #if OE_SAFE
+//         if (loc == -1) throw Exception(string("Uniform location not found: ") + it->first);
+// #endif
         // if (loc == -1) logger.warning << string("Uniform location not found: ") + it->first << logger.end;
-        // if (loc == -1) continue;
+         if (loc == -1) continue;
         Uniform& uniform = (*it).second;
         const Uniform::Data data = uniform.GetData();
         switch (uniform.GetKind()) {
@@ -304,10 +312,10 @@ void RenderingView::BindTextures2D(Shader* shad, GLint id) {
     GLint texUnit = 0;
     for (; it != shad->Textures2DEnd(); ++it) {
         GLint loc = glGetUniformLocation(id, it->first.c_str());
-        if (loc == -1) continue;
-// #if OE_SAFE
-//         if (loc == -1) throw Exception(string("Uniform location not found: ") + it->first);
-// #endif
+        // if (loc == -1) continue;
+#if OE_SAFE
+        if (loc == -1) throw Exception(string("Uniform location not found: ") + it->first);
+#endif
         glActiveTexture(GL_TEXTURE0 + texUnit);
         CHECK_FOR_GL_ERROR();
         glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(it->second.get()));
@@ -315,6 +323,22 @@ void RenderingView::BindTextures2D(Shader* shad, GLint id) {
         glUniform1i(loc, texUnit++);
         CHECK_FOR_GL_ERROR();
     }
+    Shader::CubemapIterator it2 = shad->CubemapsBegin();
+    for (; it2 != shad->CubemapsEnd(); ++it2) {
+        GLint loc = glGetUniformLocation(id, it2->first.c_str());
+        // if (loc == -1) continue;
+#if OE_SAFE
+        if (loc == -1) throw Exception(string("Uniform location not found: ") + it2->first);
+#endif
+        glActiveTexture(GL_TEXTURE0 + texUnit);
+        CHECK_FOR_GL_ERROR();
+        glBindTexture(GL_TEXTURE_CUBE_MAP, ctx->LookupCubemap(it2->second.get()));
+        CHECK_FOR_GL_ERROR();
+        glUniform1i(loc, texUnit++);
+        CHECK_FOR_GL_ERROR();
+        
+    }
+    
 }
 
 void UnbindTextures2D(Shader* shad, GLint id) {
@@ -337,6 +361,21 @@ void UnbindTextures2D(Shader* shad, GLint id) {
  */
 void RenderingView::VisitMeshNode(MeshNode* node) {
     Mesh* mesh = node->GetMesh().get();
+    Material* mat = mesh->GetMaterial().get();
+    
+    if (mat->transparency > 0.0) {
+        RenderObject ro;
+        ro.mesh = mesh;
+        ro.modelViewMatrix = Matrix<4,4,float>(modelViewMatrix);
+        transparencyQueue.push_back(ro);
+    }
+    else RenderMesh(mesh, modelViewMatrix); 
+
+    node->VisitSubNodes(*this);
+    CHECK_FOR_GL_ERROR();
+}
+
+void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
     // index buffer
     IDataBlock* indices = mesh->indices.get();
 
@@ -346,7 +385,16 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
 
     GLuint shaderId;
     PhongShader* shad;
+
     // material
+    Material* mat = mesh->GetMaterial().get();    
+    if (mat->transparency > 0.0) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE_MINUS_CONSTANT_ALPHA, GL_CONSTANT_ALPHA);
+        glBlendColor(0.0, 0.0, 0.0, mat->transparency);
+        glBlendEquation(GL_FUNC_ADD);
+    }
+    
 #if FIXED_FUNCTION
     if (renderShader && ctx->ShaderSupport()) {        
 #endif
@@ -360,8 +408,9 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
             shad = new PhongShader(mesh);
             shaders[mesh] = shad;
         }
-        shad->SetModelViewMatrix(modelViewMatrix);
-        shad->SetModelViewProjectionMatrix(modelViewMatrix * projectionMatrix);
+        shad->SetModelViewMatrix(mvMatrix);
+        shad->SetModelViewProjectionMatrix(mvMatrix * projectionMatrix);
+        shad->GetUniform("inverseNormalMatrix").Set(mvMatrix.GetReduced().GetInverse());
 
         shaderId = ctx->LookupShader(shad);
         glUseProgram(shaderId);
@@ -387,18 +436,13 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
         UnbindAttributes(shad, shaderId);        
         UnbindTextures2D(shad, shaderId);        
         glUseProgram(0);
-        node->VisitSubNodes(*this);
-        CHECK_FOR_GL_ERROR();
-        return; // no fixed function stuff if shader is supported!
-
+        
 #if FIXED_FUNCTION
 
-    }
-
-    GeometrySet* geom = mesh->GetGeometrySet().get();
-    Material* mat = mesh->GetMaterial().get();
+    } else {
     
-    // Fixed function stuff from here on (remove code for ES support)
+    GeometrySet* geom = mesh->GetGeometrySet().get();
+    
     if (renderTexture && mat->Get2DTextures().size() > 0) {
         glEnable(GL_TEXTURE_2D);
         ITexture2D* tex = (*mat->Get2DTextures().begin()).second.get();
@@ -496,9 +540,10 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
         ++i;
     }
     CHECK_FOR_GL_ERROR();
-
-    node->VisitSubNodes(*this);
+    }
 #endif
+
+    glDisable(GL_BLEND);
 }
 
 } // NS OpenGL

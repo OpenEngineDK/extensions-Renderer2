@@ -18,6 +18,9 @@
 #include <map>
 
 namespace OpenEngine {
+    namespace Resources {
+        class ICubemap;
+    }
     namespace Display2 {
         class ICanvas;
         class Canvas2D;
@@ -33,6 +36,7 @@ using Resources::BlockType;
 using Resources::Types::Type;
 using Resources::UpdateMode;
 using Resources::ColorFormat;
+using Resources::ICubemap;
 using Resources2::Shader;
 using Display2::ICanvas;
 using Display2::Canvas2D;
@@ -60,12 +64,14 @@ private:
     map<ICanvas*, GLuint> canvases;
     map<ITexture2D*, GLuint> textures;
     map<IDataBlock*, GLuint> vbos;
+    map<ICubemap*, GLuint> cubemaps;
     map<Shader*, GLuint> shaders;
 
     GLuint LoadCanvas(ICanvas* can);
     GLuint LoadTexture(ITexture2D* tex);
     GLuint LoadVBO(IDataBlock* db);
     GLuint LoadShader(Shader* shad);
+    GLuint LoadCubemap(ICubemap* cube);
 
     inline void SetupTexParameters(ITexture2D* tex);
 public:
@@ -83,6 +89,7 @@ public:
     GLuint LookupTexture(ITexture2D* tex);
     GLuint LookupVBO(IDataBlock* db);
     GLuint LookupShader(Shader* shad);
+    GLuint LookupCubemap(ICubemap* cube);
 
     // mainly for debugging and testing
     void ReleaseTextures();

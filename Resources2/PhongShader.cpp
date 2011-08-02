@@ -178,6 +178,12 @@ PhongShader::PhongShader(Mesh* mesh)
     if (!specular) GetUniform("frontMaterial.specular").Set(mat->specular);
     GetUniform("frontMaterial.shininess").Set(mat->shininess);
     
+    map<string, ICubemapPtr> cubemaps = mat->GetCubemaps();
+    if (cubemaps.begin() != cubemaps.end()) {
+        SetCubemap("cubeMap", cubemaps.begin()->second);
+        AddDefine("CUBE_MAP");
+    }
+
     // logger.info << vertexShader << logger.end;
     // logger.info << fragmentShader << logger.end;
 }
@@ -189,7 +195,7 @@ PhongShader::~PhongShader() {
 void PhongShader::SetModelViewMatrix(Matrix<4,4,float> m) {
     //Optimization: store the uniforms
     GetUniform("modelViewMatrix").Set(m);
-    GetUniform("normalMatrix").Set(m.GetReduced().GetInverse().GetTranspose());
+    GetUniform("normalMatrix").Set(m.GetReduced());//.GetInverse().GetTranspose());
 }
 
 void PhongShader::SetModelViewProjectionMatrix(Matrix<4,4,float> m) {

@@ -62,6 +62,16 @@ private:
 
     Matrix<4,4,float> modelViewMatrix, projectionMatrix;
 
+    struct RenderObject {
+        Mesh* mesh;
+        Matrix<4,4,float> modelViewMatrix;
+    };
+
+    vector<RenderObject> transparencyQueue;
+    
+    inline void RenderMesh(Mesh* mesh, Matrix<4,4,float> modelViewMatrix);
+
+
     inline void ApplyRenderState(RenderStateNode* node);
     inline void BindUniforms(Shader* shad, GLint id);
     inline void BindAttributes(Shader* shad, GLint id);

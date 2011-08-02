@@ -9,6 +9,7 @@
 
 #include <Renderers2/OpenGL/GLContext.h>
 #include <Resources/ITexture2D.h>
+#include <Resources/ICubemap.h>
 
 #include <Display2/ICanvas.h>
 #include <Display2/Canvas2D.h>
@@ -240,6 +241,65 @@ GLuint GLContext::LookupCanvas(ICanvas* can) {
 GLuint GLContext::LookupCanvas(Canvas2D* can) {
     GLuint id = LookupTexture(can->GetTexture().get());
     canvases[can] = id;
+    return id;
+}
+
+// ------- Cubemap -------
+
+GLuint GLContext::LoadCubemap(ICubemap* cubemap) {
+#if OE_SAFE
+    if (cubemap == NULL) 
+        throw Exception("Cannot load NULL cubemap.");
+#endif
+
+    GLuint texid;
+    glGenTextures(1, &texid);
+    CHECK_FOR_GL_ERROR();
+
+    cubemap->SetID(texid); // deprecated nasty stuff
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texid);
+    CHECK_FOR_GL_ERROR();
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    CHECK_FOR_GL_ERROR();
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    CHECK_FOR_GL_ERROR();
+
+    // glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+    // CHECK_FOR_GL_ERROR();
+
+    bool mipmapped = cubemap->IsMipmapped();
+    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_GENERATE_MIPMAP, mipmapped ? GL_TRUE : GL_FALSE);
+    switch(cubemap->GetFiltering()){
+    case NONE:
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, mipmapped ? GL_NEAREST_MIPMAP_NEAREST : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    default:
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, mipmapped ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
+    CHECK_FOR_GL_ERROR();
+
+    // Only support for RGBA32
+    for (int i = 0; i < 6; ++i){
+        for (int m = 0; m < cubemap->MipmapCount(); ++m)
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m,
+                         GL_RGBA, cubemap->Width(m), cubemap->Height(m), 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                         cubemap->GetRawData((ICubemap::Face)(ICubemap::POSITIVE_X + i), m));
+        CHECK_FOR_GL_ERROR();
+    }
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    return texid;
+}
+
+GLuint GLContext::LookupCubemap(ICubemap* cubemap) {
+    map<ICubemap*, GLuint>::iterator it = cubemaps.find(cubemap);
+    if (it != cubemaps.end())
+        return it->second;
+    GLuint id = LoadCubemap(cubemap);
+    cubemaps[cubemap] = id;
     return id;
 }
  

@@ -114,6 +114,16 @@ void Shader::UnsetTexture2D(string name) {
         textures.erase(it);
 }
 
+void Shader::SetCubemap(string name, ICubemapPtr cubemap) {
+    cubemaps[name] = cubemap;    
+}
+
+void Shader::UnsetCubemap(string name) {
+    map<string,ICubemapPtr>::iterator it = cubemaps.find(name);
+    if (it != cubemaps.end())
+        cubemaps.erase(it);
+}
+
 string Shader::GetVertexShader() {
     return vertexShader;
 }
@@ -144,6 +154,14 @@ Shader::Texture2DIterator Shader::Textures2DBegin() {
 
 Shader::Texture2DIterator Shader::Textures2DEnd() {
     return textures.end();
+}
+
+Shader::CubemapIterator Shader::CubemapsBegin() {
+    return cubemaps.begin();
+}
+
+Shader::CubemapIterator Shader::CubemapsEnd() {
+    return cubemaps.end();
 }
 
 

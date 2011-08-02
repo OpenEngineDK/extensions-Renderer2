@@ -14,6 +14,7 @@
 #include <Math/Matrix.h>
 #include <Resources/IDataBlock.h>
 #include <Resources/ITexture2D.h>
+#include <Resources/ICubemap.h>
 #include <Core/Event.h>
 #include <string>
 #include <map>
@@ -26,6 +27,7 @@ using Math::Vector;
 using Math::Matrix;
 using Resources::IDataBlockPtr;
 using Resources::ITexture2DPtr;
+using Resources::ICubemapPtr;
 using Core::IEvent;
 using Core::Event;
 using std::map;
@@ -88,6 +90,7 @@ public:
     typedef map<string, Uniform>::iterator UniformIterator;
     typedef map<string, IDataBlockPtr>::iterator AttributeIterator;
     typedef map<string, ITexture2DPtr>::iterator Texture2DIterator;
+    typedef map<string, ICubemapPtr>::iterator CubemapIterator;
     class ChangedEventArg {
     public:
         ChangedEventArg(Shader* shader): shader(shader) {}
@@ -98,6 +101,7 @@ private:
     map<string, Uniform> uniforms;
     map<string, IDataBlockPtr> attributes;
     map<string, ITexture2DPtr> textures;
+    map<string, ICubemapPtr> cubemaps;
 protected:
     string vertexShader, fragmentShader;
     Event<ChangedEventArg> changedEvent;
@@ -116,6 +120,9 @@ public:
     void SetTexture2D(string name, ITexture2DPtr tex);
     void UnsetTexture2D(string name);
 
+    void SetCubemap(string name, ICubemapPtr tex);
+    void UnsetCubemap(string name);
+
     virtual string GetVertexShader(); 
     virtual string GetFragmentShader();
 
@@ -127,6 +134,9 @@ public:
 
     Texture2DIterator Textures2DBegin();
     Texture2DIterator Textures2DEnd();
+
+    CubemapIterator CubemapsBegin();
+    CubemapIterator CubemapsEnd();
 
     IEvent<ChangedEventArg>& ChangedEvent() { return changedEvent; }
 };
