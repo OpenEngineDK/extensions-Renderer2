@@ -20,6 +20,10 @@ namespace OpenEngine {
     namespace Display {
         class IViewingVolume;
     }
+    namespace Resources {
+        class ICubemap;
+        typedef boost::shared_ptr<ICubemap> ICubemapPtr;
+    }
 namespace Display2 {
    
 using Display::IViewingVolume;
@@ -37,6 +41,7 @@ protected:
     IViewingVolume* cam;
     ISceneNode* scene;
     RGBAColor bgc;
+    Resources::ICubemapPtr skybox;
 public:
     Canvas3D(unsigned int width, unsigned int height, ColorFormat format = Resources::RGB): 
         ICanvas(format),
@@ -88,15 +93,11 @@ public:
     virtual unsigned int GetWidth() { return width; } 
     virtual unsigned int GetHeight() { return height; } 
 
-    void SetBackgroundColor(RGBAColor color) {
-        bgc = color;
-    }
+    inline void SetBackgroundColor(const RGBAColor& color) { bgc = color; }
+    inline RGBAColor GetBackgroundColor() const { return bgc; }
     
-    RGBAColor GetBackgroundColor() {
-        return bgc;
-    }
-
-
+    inline void SetSkybox(const Resources::ICubemapPtr skybox) { this->skybox = skybox; }
+    inline Resources::ICubemapPtr GetSkybox() const { return skybox; }
 
 };
 

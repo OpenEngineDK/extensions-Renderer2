@@ -70,6 +70,11 @@ void RenderingView::Handle(RenderingEventArg arg) {
     modelViewMatrix = arg.canvas->GetViewingVolume()->GetViewMatrix();
     projectionMatrix = arg.canvas->GetViewingVolume()->GetProjectionMatrix();
     ctx = arg.renderer.GetContext();
+
+    // Setup skybox
+    if (arg.canvas->GetSkybox())
+        RenderSkybox(*(arg.canvas), *ctx);
+
     // setup default render state
     ApplyRenderState(currentRenderState);
     arg.canvas->GetScene()->Accept(*this);
@@ -373,6 +378,46 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
 
     node->VisitSubNodes(*this);
     CHECK_FOR_GL_ERROR();
+}
+
+    void RenderingView::RenderSkybox(const Canvas3D& canvas, GLContext& ctx) {
+    glDisable(GL_DEPTH_TEST);
+#if FIXED_FUNCTION
+    // Do nothing in fixed function, who needs it anyway :)
+#else
+    // Draw skybox to background
+    static Shader* skybox = NULL;
+    if (skybox == NULL){
+        string vert = 
+            "uniform mat4 oe_ViewProjMatrixInverse; \n\
+            attribute vec3 oe_Vertex; \n                                \
+            varying vec3 eyedir; \n                                     \
+            void main() { \n                                            \
+            gl_Position = gl_Vertex; \n                                 \
+            vec4 dir = vec4(gl_Vertex.x, gl_Vertex.y, 1.0, 1.0);\n      \
+            eyedir = -normalize((oe_ViewProjMatrixInverse * dir).xyz); \n \
+            }";
+        
+        string frag = 
+            "uniform samplerCube skybox; \n\
+            varying vec3 eyedir; \n\
+            void main() { gl_FragColor = textureCube(skybox, eyedir); }";
+        skybox = new Shader(vert, frag);
+    }
+
+    GLuint shaderId = ctx.LookupShader(skybox);
+    
+    skybox->SetCubemap("skybox", canvas.GetSkybox());
+    Matrix<4,4,float> viewProjInv = (canvas.GetViewingVolume()->GetViewMatrix() * 
+                                     canvas.GetViewingVolume()->GetProjectionMatrix()).GetInverse();
+    skybox->GetUniform("oe_ViewProjMatrixInverse").Set(viewProjInv);
+
+    glUseProgram(shaderId);
+    BindUniforms(skybox, shaderId);
+    glRecti(-1,-1,1,1);
+    glUseProgram(0);
+        
+#endif
 }
 
 void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
