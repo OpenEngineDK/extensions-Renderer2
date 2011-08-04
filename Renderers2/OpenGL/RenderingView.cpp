@@ -90,11 +90,15 @@ void RenderingView::Handle(RenderingEventArg arg) {
             
 void RenderingView::ApplyRenderState(RenderStateNode* node) {
     if (node->IsOptionEnabled(RenderStateNode::WIREFRAME)) {
+#ifndef OE_IOS
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+#endif
         CHECK_FOR_GL_ERROR();
     }
     else if (node->IsOptionDisabled(RenderStateNode::WIREFRAME)) {
+#ifndef OE_IOS
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+#endif
         CHECK_FOR_GL_ERROR();
     }
 
@@ -385,7 +389,9 @@ if (ctx.ShaderSupport()) {
 
     glUseProgram(glshader.id);
     BindUniforms(glshader);
+#ifndef OE_IOS
     glRecti(-1,-1,1,1);
+#endif
     glUseProgram(0);
 #if FIXED_FUNCTION
  }        
@@ -557,7 +563,6 @@ void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
     CHECK_FOR_GL_ERROR();
     }
 #endif
-
     glDisable(GL_BLEND);
 }
 

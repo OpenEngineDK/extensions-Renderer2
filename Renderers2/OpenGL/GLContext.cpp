@@ -42,6 +42,11 @@ GLContext::~GLContext() {
 void GLContext::Init() {
     if (init) return;
     // Initialize the "OpenGL Extension Wrangler" library
+#ifdef OE_IOS
+    fboSupport = true;
+    vboSupport = true;
+    shaderSupport = true;
+#else
     GLenum err = glewInit();
     if (err!=GLEW_OK)
         logger.error << "GLEW: "
@@ -77,6 +82,8 @@ void GLContext::Init() {
     fboSupport = glewGetExtension("GL_EXT_framebuffer_object") == GL_TRUE;
     vboSupport = glewIsSupported("GL_VERSION_2_0");
     shaderSupport = glewIsSupported("GL_VERSION_2_0");
+#endif
+    
     init = true;
 }
 
@@ -106,6 +113,7 @@ GLint GLContext::GLInternalColorFormat(ColorFormat f){
     case BGRA: 
     case RGBA: 
         return GL_RGBA;
+#ifndef OE_IOS
     case ALPHA_COMPRESSED: return GL_COMPRESSED_ALPHA;
     case LUMINANCE_COMPRESSED: return GL_COMPRESSED_LUMINANCE;
     case LUMINANCE32F: return GL_R32F;
@@ -114,6 +122,7 @@ GLint GLContext::GLInternalColorFormat(ColorFormat f){
     case RGBA_COMPRESSED: return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
     case RGB32F: return GL_RGB32F;
     case RGBA32F: return GL_RGBA32F;
+#endif
     case DEPTH: return GL_DEPTH_COMPONENT;
     default: 
         // todo: should throw exception here ? ...
@@ -143,10 +152,12 @@ GLenum GLContext::GLColorFormat(ColorFormat f){
     case RGBA_COMPRESSED: 
     case RGBA32F: 
         return GL_RGBA;
+#ifndef OE_IOS
     case BGR: 
         return GL_BGR;
     case BGRA: 
         return GL_BGRA;
+#endif
     case DEPTH: 
         return GL_DEPTH_COMPONENT;
     default: 
@@ -173,8 +184,10 @@ unsigned int GLContext::GLTypeSize(Type t){
         return sizeof(GLint);
     case Types::FLOAT:
         return sizeof(GLfloat);
+#ifndef OE_IOS
     case Types::DOUBLE:
         return sizeof(GLdouble);
+#endif
     default:
         //case Types::NOTYPE:
         throw Exception("GLTypeSize: Unknown type.");
@@ -185,15 +198,19 @@ unsigned int GLContext::GLTypeSize(Type t){
 GLenum GLContext::GLAccessType(BlockType b, UpdateMode u){
     if (u == STATIC){
         switch (b){
+#ifndef OE_IOS
         case PIXEL_PACK:
             return GL_STATIC_COPY;
+#endif
         default:
             return GL_STATIC_DRAW;
         }
     }else if (u == DYNAMIC){
         switch (b){
+#ifndef OE_IOS
         case PIXEL_PACK:
             return GL_DYNAMIC_COPY;
+#endif
         default:
             return GL_DYNAMIC_DRAW;
         }
@@ -216,9 +233,10 @@ GLuint GLContext::LoadCanvas(ICanvas* can) {
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+#ifndef OE_IOS
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-
+#endif
     GLint internalFormat = GLInternalColorFormat(can->GetColorFormat());
     GLenum format = GLColorFormat(can->GetColorFormat());
 
@@ -266,7 +284,9 @@ GLuint GLContext::LoadCubemap(ICubemap* cubemap) {
     CHECK_FOR_GL_ERROR();
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+#ifndef OE_IOS
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+#endif
     CHECK_FOR_GL_ERROR();
 
     // glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -311,15 +331,26 @@ void GLContext::SetupTexParameters(ITexture2D* tex){
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     CHECK_FOR_GL_ERROR();
 
+#ifdef OE_IOS
+    // es test
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    return;
+#endif
+    
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, tex->GetWrapping());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tex->GetWrapping());
 
     if (tex->UseMipmapping()) {
+#ifndef OE_IOS
         glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, tex->GetFiltering());
+#endif
     } 
     else {
+#ifndef OE_IOS
         glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
+#endif
         if (tex->GetFiltering() == NONE)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         else
@@ -468,14 +499,14 @@ GLuint GLContext::LoadShader(Shader* shad) {
     glAttachShader(shaderId, fragmentId);
     CHECK_FOR_GL_ERROR();
 
-#if OE_IOS
-    string iosHeader = "precision mediump float;\n";
+#ifdef OE_IOS
+    string iosHeader = string("precision mediump float;\n");
 #endif
 
     // compile vertex shader
     const GLchar* shaderBits[1];
     string vertexShader = shad->GetVertexShader();
-#if OE_IOS
+#ifdef OE_IOS
     vertexShader = iosHeader + vertexShader;
 #endif
     shaderBits[0] = vertexShader.c_str();
@@ -498,7 +529,7 @@ GLuint GLContext::LoadShader(Shader* shad) {
 
     // compile fragment shader
     string fragmentShader = shad->GetFragmentShader();;
-#if OE_IOS
+#ifdef OE_IOS
     fragmentShader = iosHeader + fragmentShader;
 #endif
     shaderBits[0] = fragmentShader.c_str();

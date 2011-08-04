@@ -42,7 +42,7 @@ void PhongShader::AddDefine(string name, int val) {
 }
 
 PhongShader::PhongShader(Mesh* mesh)
-    : ShaderResource(*ResourceManager<ShaderResource>::Create("extensions/Renderer2/shaders/PhongShaderESCompatible.glsl").get())
+    : ShaderResource(*ResourceManager<ShaderResource>::Create("shaders/PhongShaderESCompatible.glsl").get())
 {
     ShaderResource::Load();
     // logger.info << "phong" << logger.end;

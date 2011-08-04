@@ -105,7 +105,7 @@ void FXAAShader::Handle(RenderingEventArg arg) {
     glVertexAttribPointer(loc, 2, GL_FLOAT, GL_FALSE, 0, vertices);
     CHECK_FOR_GL_ERROR();
 
-    glDrawArrays(GL_QUADS, 0, 4);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     CHECK_FOR_GL_ERROR();
 
     glDisableVertexAttribArray(loc);

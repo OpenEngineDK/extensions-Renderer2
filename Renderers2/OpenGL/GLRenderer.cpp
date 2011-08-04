@@ -44,7 +44,7 @@ GLRenderer::GLRenderer(GLContext* ctx)
     , cv(new CanvasVisitor(*this))
     , arg(Core::ProcessEventArg(Time(), 0))
 {
-    quadShader = ResourceManager<ShaderResource>::Create("extensions/Renderer2/shaders/QuadShader.glsl");
+    quadShader = ResourceManager<ShaderResource>::Create("shaders/QuadShader.glsl");
     quadShader->Load();
     
     preProcess.Attach(*lv);
@@ -241,13 +241,15 @@ void GLRenderer::Render(Canvas3D* canvas) {
     this->postProcess.Notify(rarg);
     // this->stage = RENDERER_PREPROCESS;
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas));
-    CHECK_FOR_GL_ERROR();
-    glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
-                     0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
-    CHECK_FOR_GL_ERROR();
-    glBindTexture(GL_TEXTURE_2D, 0);
+#ifndef OE_IOS
+   glActiveTexture(GL_TEXTURE0);
+   glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas));
+   CHECK_FOR_GL_ERROR();
+   glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
+                    0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
+   CHECK_FOR_GL_ERROR();
+   glBindTexture(GL_TEXTURE_2D, 0);
+#endif
 }
 
 void GLRenderer::Handle(Core::InitializeEventArg arg) {
@@ -256,7 +258,9 @@ void GLRenderer::Handle(Core::InitializeEventArg arg) {
     glEnable(GL_DEPTH_TEST);						   
     CHECK_FOR_GL_ERROR();
     // Set perspective calculations to most accurate
+#ifndef OE_IOS
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+#endif
 
 #if FIXED_FUNCTION
     glShadeModel(GL_SMOOTH);
