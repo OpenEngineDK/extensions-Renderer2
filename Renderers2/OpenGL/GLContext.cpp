@@ -486,9 +486,6 @@ GLuint GLContext::LoadShader(Shader* shad) {
         throw Exception("Failed to compile vertex shader.");
     }
 #endif
-#if DEBUG
-    PrintShaderInfoLog(vertexId);
-#endif
 
     // compile fragment shader
     string fragmentShader = shad->GetFragmentShader();;
@@ -507,22 +504,18 @@ GLuint GLContext::LoadShader(Shader* shad) {
         throw Exception("Failed to compile fragment shader.");
     }
 #endif
-#if DEBUG
-    PrintShaderInfoLog(fragmentId);
-#endif
 
     // Link the program object and print out the info log
     glLinkProgram(shaderId);
+#if OE_SAFE
     GLint linked;
     glGetProgramiv(shaderId, GL_LINK_STATUS, &linked);
-#if DEBUG
-    PrintProgramInfoLog(shaderId);
+    if(linked == GL_FALSE) {
+        PrintProgramInfoLog(shaderId);
+        throw Exception("Failed to link shader program");
+    }
 #endif
     CHECK_FOR_GL_ERROR();
-#if OE_SAFE            
-    if(linked == GL_FALSE)
-        throw Exception("Failed to link shader program");
-#endif
     return shaderId;
 }
 
