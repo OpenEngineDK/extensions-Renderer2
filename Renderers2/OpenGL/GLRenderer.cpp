@@ -31,6 +31,7 @@ using Display::IViewingVolume;
 
 using namespace Display2;
 using Resources::ResourceManager;
+using Resources::DirectoryManager;
 using Resources2::ShaderResource;
 using Resources2::ShaderResourcePtr;
 using namespace Math;
@@ -44,6 +45,7 @@ GLRenderer::GLRenderer(GLContext* ctx)
     , cv(new CanvasVisitor(*this))
     , arg(Core::ProcessEventArg(Time(), 0))
 {
+    DirectoryManager::AppendPath("extensions/Renderer2/");
     quadShader = ResourceManager<ShaderResource>::Create("shaders/QuadShader.glsl");
     quadShader->Load();
     
