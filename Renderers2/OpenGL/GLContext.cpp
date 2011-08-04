@@ -468,9 +468,16 @@ GLuint GLContext::LoadShader(Shader* shad) {
     glAttachShader(shaderId, fragmentId);
     CHECK_FOR_GL_ERROR();
 
+#if OE_IOS
+    string iosHeader = "precision mediump float;\n";
+#endif
+
     // compile vertex shader
     const GLchar* shaderBits[1];
     string vertexShader = shad->GetVertexShader();
+#if OE_IOS
+    vertexShader = iosHeader + vertexShader;
+#endif
     shaderBits[0] = vertexShader.c_str();
     glShaderSource(vertexId, 1, shaderBits, NULL);
     glCompileShader(vertexId);
@@ -491,6 +498,9 @@ GLuint GLContext::LoadShader(Shader* shad) {
 
     // compile fragment shader
     string fragmentShader = shad->GetFragmentShader();;
+#if OE_IOS
+    fragmentShader = iosHeader + fragmentShader;
+#endif
     shaderBits[0] = fragmentShader.c_str();
     glShaderSource(fragmentId, 1, shaderBits, NULL);
     glCompileShader(fragmentId);
