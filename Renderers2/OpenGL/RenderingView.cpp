@@ -380,11 +380,13 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
     CHECK_FOR_GL_ERROR();
 }
 
-    void RenderingView::RenderSkybox(const Canvas3D& canvas, GLContext& ctx) {
+void RenderingView::RenderSkybox(const Canvas3D& canvas, GLContext& ctx) {
     glDisable(GL_DEPTH_TEST);
 #if FIXED_FUNCTION
     // Do nothing in fixed function, who needs it anyway :)
-#else
+    // except for the shadersupport check ;-)
+if (ctx.ShaderSupport()) {        
+#endif
     // Draw skybox to background
     static Shader* skybox = NULL;
     if (skybox == NULL){
@@ -405,7 +407,7 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
         skybox = new Shader(vert, frag);
     }
 
-    GLuint shaderId = ctx.LookupShader(skybox);
+    GLuint shaderId = ctx.LookupShader(skybox).id;
     
     skybox->SetCubemap("skybox", canvas.GetSkybox());
     Matrix<4,4,float> viewProjInv = (canvas.GetViewingVolume()->GetViewMatrix() * 
@@ -416,7 +418,8 @@ void RenderingView::VisitMeshNode(MeshNode* node) {
     BindUniforms(skybox, shaderId);
     glRecti(-1,-1,1,1);
     glUseProgram(0);
-        
+#if FIXED_FUNCTION
+ }        
 #endif
 }
 
@@ -457,7 +460,8 @@ void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
         shad->SetModelViewProjectionMatrix(mvMatrix * projectionMatrix);
         shad->GetUniform("inverseNormalMatrix").Set(mvMatrix.GetReduced().GetInverse());
 
-        shaderId = ctx->LookupShader(shad);
+        GLContext::GLShader glshader = ctx->LookupShader(shad);
+        shaderId = glshader.id;
         glUseProgram(shaderId);
         BindUniforms(shad, shaderId);
         BindAttributes(shad, shaderId);
