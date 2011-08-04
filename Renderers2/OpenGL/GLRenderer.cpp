@@ -73,8 +73,8 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
     const float texc[8] = {
         0.0f, 1.0f,
         0.0f, 0.0f,
-        1.0f, 0.0f,
-        1.0f, 1.0f
+        1.0f, 1.0f,
+        1.0f, 0.0f
     };
 
 #if FIXED_FUNCTION
@@ -93,7 +93,7 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
         glEnableVertexAttribArray(vsLoc);
         glEnableVertexAttribArray(tcLoc);
         CHECK_FOR_GL_ERROR();
-                    
+ 
         glVertexAttribPointer(tcLoc, 2, GL_FLOAT, GL_FALSE, 0, texc);
         CHECK_FOR_GL_ERROR();
 
@@ -110,8 +110,8 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
             const float vert[8] = {
                 x, y, 
                 x, y - h, 
-                x + w, y - h, 
-                x + w, y
+                x + w, y,
+                x + w, y - h
             };
             
             float col[4];
@@ -127,7 +127,7 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
             glVertexAttribPointer(vsLoc, 2, GL_FLOAT, GL_FALSE, 0, vert);            
             CHECK_FOR_GL_ERROR();
 
-            glDrawArrays(GL_QUADS, 0, 4);
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             CHECK_FOR_GL_ERROR();
         }
 
@@ -166,8 +166,8 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
             const float vert[8] = {
                 x, y, 
                 x, y - h, 
-                x + w, y - h, 
-                x + w, y
+                x + w, y,
+                x + w, y - h
             };
             glVertexPointer(2, GL_FLOAT, 0, vert);
         
@@ -181,7 +181,7 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
             glColorPointer(4, GL_FLOAT, 0, col);
 
             glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(it->canvas));
-            glDrawArrays(GL_QUADS, 0, 4);
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             CHECK_FOR_GL_ERROR();
         }
 
