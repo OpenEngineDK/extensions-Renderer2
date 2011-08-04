@@ -195,7 +195,9 @@ PhongShader::~PhongShader() {
 void PhongShader::SetModelViewMatrix(Matrix<4,4,float> m) {
     //Optimization: store the uniforms
     GetUniform("modelViewMatrix").Set(m);
-    GetUniform("normalMatrix").Set(m.GetReduced());//.GetInverse().GetTranspose());
+    Matrix<3,3,float> invnorm = m.GetReduced().GetInverse();
+    GetUniform("inverseNormalMatrix").Set(invnorm);
+    GetUniform("normalMatrix").Set(invnorm.GetTranspose());
 }
 
 void PhongShader::SetModelViewProjectionMatrix(Matrix<4,4,float> m) {

@@ -9,7 +9,6 @@
 
 #include <Renderers2/OpenGL/RenderingView.h>
 
-#include <Renderers2/OpenGL/GLContext.h>
 #include <Display2/Canvas3D.h>
 #include <Display/IViewingVolume.h>
 #include <Resources2/Shader.h>
@@ -222,16 +221,11 @@ void RenderingView::VisitTransformationNode(TransformationNode* node) {
     modelViewMatrix = oldMv;
 }
 
-void RenderingView::BindUniforms(Shader* shad, GLint id) {
-    Shader::UniformIterator it = shad->UniformsBegin();
-    for (; it != shad->UniformsEnd(); ++it) {
-        GLint loc = glGetUniformLocation(id, (*it).first.c_str());
-// #if OE_SAFE
-//         if (loc == -1) throw Exception(string("Uniform location not found: ") + it->first);
-// #endif
-        // if (loc == -1) logger.warning << string("Uniform location not found: ") + it->first << logger.end;
-         if (loc == -1) continue;
-        Uniform& uniform = (*it).second;
+void RenderingView::BindUniforms(GLContext::GLShader& glshader) {
+    map<Uniform*, GLint>::iterator it = glshader.uniforms.begin();
+    for (; it != glshader.uniforms.end(); ++it) {
+        GLint loc = it->second; 
+        Uniform& uniform = *it->first;
         const Uniform::Data data = uniform.GetData();
         switch (uniform.GetKind()) {
         case Uniform::INT:
@@ -265,97 +259,72 @@ void RenderingView::BindUniforms(Shader* shad, GLint id) {
     }
 }
 
-void RenderingView::BindAttributes(Shader* shad, GLint id) {
-    Shader::AttributeIterator it = shad->AttributesBegin();
-
-    if (ctx->VBOSupport()) {
-        for (; it != shad->AttributesEnd(); ++it) {
-            GLint loc = glGetAttribLocation(id, it->first.c_str());
-            if (loc == -1) continue;
-// #if OE_SAFE
-//             if (loc == -1) throw Exception(string("Attribute location not found: ") + it->first);
-// #endif
-            IDataBlock* db = it->second.get();
+void RenderingView::BindAttributes(GLContext::GLShader& glshader) {
+    map<IDataBlockPtr, GLint>::iterator it = glshader.attributes.begin();
+    for (; it != glshader.attributes.end(); ++it) {
+        GLint loc = it->second;
+        IDataBlock* db = it->first.get();
+        if (ctx->VBOSupport()) {
             glBindBuffer(GL_ARRAY_BUFFER, ctx->LookupVBO(db));
             glEnableVertexAttribArray(loc);
             glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, 0);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
-            CHECK_FOR_GL_ERROR();
-
         }
-    }
-    else {
-        for (; it != shad->AttributesEnd(); ++it) {
-            GLint loc = glGetAttribLocation(id, it->first.c_str());
-            if (loc == -1) continue;
-// #if OE_SAFE
-//             if (loc == -1) throw Exception(string("Attribute location not found: ") + it->first);
-// #endif
+        else {
             glEnableVertexAttribArray(loc);
-            IDataBlock* db = it->second.get();
+            IDataBlock* db = it->first.get();
             glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, db->GetVoidData());
-            CHECK_FOR_GL_ERROR();
         }
-    }
-}
-
-void UnbindAttributes(Shader* shad, GLint id) {
-    Shader::AttributeIterator it = shad->AttributesBegin();
-    for (; it != shad->AttributesEnd(); ++it) {
-        GLint loc = glGetAttribLocation(id, it->first.c_str());
-        if (loc == -1) continue;
-// #if OE_SAFE
-//             if (loc == -1) throw Exception(string("Attribute location not found: ") + it->first);
-// #endif
-        glDisableVertexAttribArray(loc);
         CHECK_FOR_GL_ERROR();
     }
 }
 
-void RenderingView::BindTextures2D(Shader* shad, GLint id) {
-    Shader::Texture2DIterator it = shad->Textures2DBegin();
+void RenderingView::UnbindAttributes(GLContext::GLShader& glshader) {
+    map<IDataBlockPtr, GLint>::iterator it = glshader.attributes.begin();
+    for (; it != glshader.attributes.end(); ++it) {
+        glDisableVertexAttribArray(it->second);
+        CHECK_FOR_GL_ERROR();
+    }
+}
+
+void RenderingView::BindTextures2D(GLContext::GLShader& glshader) {
+    map<ITexture2DPtr, GLint>::iterator tex_it = glshader.textures.begin();
     GLint texUnit = 0;
-    for (; it != shad->Textures2DEnd(); ++it) {
-        GLint loc = glGetUniformLocation(id, it->first.c_str());
-        // if (loc == -1) continue;
-#if OE_SAFE
-        if (loc == -1) throw Exception(string("Uniform location not found: ") + it->first);
-#endif
+    for (; tex_it != glshader.textures.end(); ++tex_it) {
+        GLint loc = tex_it->second;
         glActiveTexture(GL_TEXTURE0 + texUnit);
         CHECK_FOR_GL_ERROR();
-        glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(it->second.get()));
+        glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(tex_it->first.get()));
         CHECK_FOR_GL_ERROR();
         glUniform1i(loc, texUnit++);
         CHECK_FOR_GL_ERROR();
     }
-    Shader::CubemapIterator it2 = shad->CubemapsBegin();
-    for (; it2 != shad->CubemapsEnd(); ++it2) {
-        GLint loc = glGetUniformLocation(id, it2->first.c_str());
-        // if (loc == -1) continue;
-#if OE_SAFE
-        if (loc == -1) throw Exception(string("Uniform location not found: ") + it2->first);
-#endif
+
+    map<ICubemapPtr, GLint>::iterator cube_it = glshader.cubemaps.begin();
+    for (; cube_it != glshader.cubemaps.end(); ++cube_it) {
+        GLint loc = cube_it->second;
         glActiveTexture(GL_TEXTURE0 + texUnit);
         CHECK_FOR_GL_ERROR();
-        glBindTexture(GL_TEXTURE_CUBE_MAP, ctx->LookupCubemap(it2->second.get()));
+        glBindTexture(GL_TEXTURE_CUBE_MAP, ctx->LookupCubemap(cube_it->first.get()));
         CHECK_FOR_GL_ERROR();
         glUniform1i(loc, texUnit++);
-        CHECK_FOR_GL_ERROR();
-        
-    }
-    
+        CHECK_FOR_GL_ERROR();        
+    }    
 }
 
-void UnbindTextures2D(Shader* shad, GLint id) {
-    Shader::Texture2DIterator it = shad->Textures2DBegin();
+void RenderingView::UnbindTextures2D(GLContext::GLShader& glshader) {
     GLint texUnit = 0;
-    for (; it != shad->Textures2DEnd(); ++it) {
-        GLint loc = glGetUniformLocation(id, it->first.c_str());
-        if (loc == -1) continue;
-
+    for (unsigned int i = 0; i < glshader.textures.size(); ++i) {
         glActiveTexture(GL_TEXTURE0 + texUnit);
-        CHECK_FOR_GL_ERROR();
         glBindTexture(GL_TEXTURE_2D, 0);
+        CHECK_FOR_GL_ERROR();
+        ++texUnit;
+    }
+    for (unsigned int i = 0; i < glshader.cubemaps.size(); ++i) {
+        glActiveTexture(GL_TEXTURE0 + texUnit);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+        CHECK_FOR_GL_ERROR();
+        ++texUnit;
     }
 }
 
@@ -407,15 +376,15 @@ if (ctx.ShaderSupport()) {
         skybox = new Shader(vert, frag);
     }
 
-    GLuint shaderId = ctx.LookupShader(skybox);
+    GLContext::GLShader glshader= ctx.LookupShader(skybox);
     
     skybox->SetCubemap("skybox", canvas.GetSkybox());
     Matrix<4,4,float> viewProjInv = (canvas.GetViewingVolume()->GetViewMatrix() * 
                                      canvas.GetViewingVolume()->GetProjectionMatrix()).GetInverse();
     skybox->GetUniform("oe_ViewProjMatrixInverse").Set(viewProjInv);
 
-    glUseProgram(shaderId);
-    BindUniforms(skybox, shaderId);
+    glUseProgram(glshader.id);
+    BindUniforms(glshader);
     glRecti(-1,-1,1,1);
     glUseProgram(0);
 #if FIXED_FUNCTION
@@ -431,7 +400,6 @@ void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
     GLsizei offset = mesh->GetIndexOffset();
     Geometry::Type type = mesh->GetType();
 
-    GLuint shaderId;
     PhongShader* shad;
 
     // material
@@ -454,18 +422,17 @@ void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
             shad = it->second;
         else {
             shad = new PhongShader(mesh);
+            shad->SetLight(light, Vector<4,float>(0.3, 0.3, 0.3, 1.0));
             shaders[mesh] = shad;
         }
         shad->SetModelViewMatrix(mvMatrix);
         shad->SetModelViewProjectionMatrix(mvMatrix * projectionMatrix);
-        shad->GetUniform("inverseNormalMatrix").Set(mvMatrix.GetReduced().GetInverse());
 
-        GLuint shaderId = ctx->LookupShader(shad);
-        glUseProgram(shaderId);
-        BindUniforms(shad, shaderId);
-        BindAttributes(shad, shaderId);
-        BindTextures2D(shad, shaderId);
-
+        GLContext::GLShader glshader = ctx->LookupShader(shad);
+        glUseProgram(glshader.id);
+        BindUniforms(glshader);
+        BindAttributes(glshader);
+        BindTextures2D(glshader);
 
         if (ctx->VBOSupport()) {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ctx->LookupVBO(indices));
@@ -481,8 +448,8 @@ void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
                            indices->GetType(), 
                            (char*)indices->GetVoidDataPtr() + offset * GLContext::GLTypeSize(indices->GetType()));
         }
-        UnbindAttributes(shad, shaderId);        
-        UnbindTextures2D(shad, shaderId);        
+        UnbindAttributes(glshader);        
+        UnbindTextures2D(glshader);        
         glUseProgram(0);
         
 #if FIXED_FUNCTION

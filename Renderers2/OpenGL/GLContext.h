@@ -16,6 +16,7 @@
 #include <Meta/OpenGL.h>
 #include <Core/IListener.h>
 #include <map>
+#include <vector>
 
 namespace OpenEngine {
     namespace Resources {
@@ -29,19 +30,24 @@ namespace Renderers2 {
 namespace OpenGL {
 
 using Resources::ITexture2D;
+using Resources::ITexture2DPtr;
 using Resources::Texture2DChangedEventArg;
 using Resources::IDataBlockChangedEventArg;
 using Resources::IDataBlock;
+using Resources::IDataBlockPtr;
 using Resources::BlockType;
 using Resources::Types::Type;
 using Resources::UpdateMode;
 using Resources::ColorFormat;
 using Resources::ICubemap;
+using Resources::ICubemapPtr;
 using Resources2::Shader;
+using Resources2::Uniform;
 using Display2::ICanvas;
 using Display2::Canvas2D;
 using Core::IListener;
 using std::map;
+using std::vector;
 
 /**
  * OpenGL Shader Language versions
@@ -58,6 +64,15 @@ enum GLSLVersion { GLSL_UNKNOWN, GLSL_NONE, GLSL_14, GLSL_20 };
 class GLContext: public IListener<Shader::ChangedEventArg>
                , public IListener<Texture2DChangedEventArg> 
                , public IListener<IDataBlockChangedEventArg> {
+public:
+    // structure containing the uniform locations.
+    struct GLShader {
+        GLuint id;
+        map<Uniform*, GLint> uniforms;
+        map<IDataBlockPtr, GLint> attributes;
+        map<ITexture2DPtr, GLint> textures;
+        map<ICubemapPtr, GLint> cubemaps;
+    };
 private:
     GLSLVersion glslversion;
     bool init, fboSupport, vboSupport, shaderSupport;
@@ -65,14 +80,14 @@ private:
     map<ITexture2D*, GLuint> textures;
     map<IDataBlock*, GLuint> vbos;
     map<ICubemap*, GLuint> cubemaps;
-    map<Shader*, GLuint> shaders;
+    map<Shader*, GLShader> shaders;
 
     GLuint LoadCanvas(ICanvas* can);
     GLuint LoadTexture(ITexture2D* tex);
     GLuint LoadVBO(IDataBlock* db);
     GLuint LoadShader(Shader* shad);
     GLuint LoadCubemap(ICubemap* cube);
-
+    inline GLShader ResolveLocations(GLuint id, Shader* shad);
     inline void SetupTexParameters(ITexture2D* tex);
 public:
     GLContext();
@@ -88,7 +103,7 @@ public:
     GLuint LookupCanvas(Canvas2D* can);
     GLuint LookupTexture(ITexture2D* tex);
     GLuint LookupVBO(IDataBlock* db);
-    GLuint LookupShader(Shader* shad);
+    GLShader LookupShader(Shader* shad);
     GLuint LookupCubemap(ICubemap* cube);
 
     // mainly for debugging and testing

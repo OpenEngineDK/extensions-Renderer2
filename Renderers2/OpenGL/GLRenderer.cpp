@@ -80,7 +80,8 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
 #if FIXED_FUNCTION
     if (ctx->ShaderSupport()) {
 #endif
-        GLuint shaderId = ctx->LookupShader(quadShader.get());
+        GLContext::GLShader glShader = ctx->LookupShader(quadShader.get());
+        GLuint shaderId = glShader.id;
         glUseProgram(shaderId);
         
         const GLint vsLoc = glGetAttribLocation(shaderId, "vertex");

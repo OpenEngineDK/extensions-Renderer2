@@ -69,7 +69,7 @@ void FXAAShader::Handle(RenderingEventArg arg) {
     if (!arg.renderer.GetContext()->ShaderSupport()) return; 
 
 
-    GLint shaderId = arg.renderer.GetContext()->LookupShader(this);
+    GLint shaderId = arg.renderer.GetContext()->LookupShader(this).id;
     GLint screenId = arg.renderer.GetContext()->LookupCanvas(arg.canvas);
 
     // copy backbuffer to screen tex

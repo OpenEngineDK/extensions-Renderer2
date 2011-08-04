@@ -25,6 +25,8 @@ using Resources2::Uniform;
 using Resources2::Shader;
 using Display2::ICanvas;
 
+using namespace std;
+
 GLContext::GLContext()
     : init(false)
     , fboSupport(false)
@@ -519,14 +521,49 @@ GLuint GLContext::LoadShader(Shader* shad) {
     return shaderId;
 }
 
-GLuint GLContext::LookupShader(Shader* shad) {
-    map<Shader*, GLuint>::iterator it = shaders.find(shad);
+GLContext::GLShader GLContext::ResolveLocations(GLuint id, Shader* shad) {
+    GLContext::GLShader glshader;
+    glshader.id = id;
+    Shader::UniformIterator uni_it = shad->UniformsBegin();
+    for (; uni_it != shad->UniformsEnd(); ++uni_it) {
+        GLint loc = glGetUniformLocation(id, uni_it->first.c_str());
+        if (loc == -1) continue;
+        glshader.uniforms[&uni_it->second] = loc;
+    }
+
+    Shader::AttributeIterator attr_it = shad->AttributesBegin();
+    for (; attr_it != shad->AttributesEnd(); ++attr_it) {
+        GLint loc = glGetAttribLocation(id, attr_it->first.c_str());
+        if (loc == -1) continue;
+        glshader.attributes[attr_it->second] = loc;        
+    }
+
+    Shader::Texture2DIterator tex_it = shad->Textures2DBegin();
+    for (; tex_it != shad->Textures2DEnd(); ++tex_it) {
+        GLint loc = glGetUniformLocation(id, tex_it->first.c_str());
+        if (loc == -1) continue;
+        glshader.textures[tex_it->second] = loc;        
+    }
+
+    Shader::CubemapIterator cube_it = shad->CubemapsBegin();
+    for (; cube_it != shad->CubemapsEnd(); ++cube_it) {
+        GLint loc = glGetUniformLocation(id, cube_it->first.c_str());
+        if (loc == -1) continue;
+        glshader.cubemaps[cube_it->second] = loc;        
+    }
+
+    return glshader;
+}
+
+GLContext::GLShader GLContext::LookupShader(Shader* shad) {
+    map<Shader*, GLShader>::iterator it = shaders.find(shad);
     if (it != shaders.end())
         return (*it).second;
     GLuint id = LoadShader(shad);
-    shaders[shad] = id;
+    GLContext::GLShader glshader = ResolveLocations(id, shad);
+    shaders[shad] = glshader;
     shad->ChangedEvent().Attach(*this);
-    return id;
+    return glshader;
 }
 
 void GLContext::ReleaseTextures() {
@@ -541,8 +578,14 @@ void GLContext::ReleaseTextures() {
          glDeleteTextures(1, &it2->second);
      }
 
+     map<ICubemap*, GLuint>::iterator it3 = cubemaps.begin();
+     for (; it3 != cubemaps.end(); ++it3) {
+         glDeleteTextures(1, &it3->second);
+     }
+
      textures.clear();
      canvases.clear();
+     cubemaps.clear();
 }
 
 void GLContext::ReleaseVBOs() {
@@ -555,16 +598,16 @@ void GLContext::ReleaseVBOs() {
 }
 
 void GLContext::ReleaseShaders() {
-    map<Shader*, GLuint>::iterator it = shaders.begin();
+    map<Shader*, GLShader>::iterator it = shaders.begin();
     for (; it != shaders.end(); ++it) {
         it->first->ChangedEvent().Detach(*this);
         GLuint shads[2];
         GLsizei count;
-        glGetAttachedShaders(it->second, 2, &count, shads);
+        glGetAttachedShaders(it->second.id, 2, &count, shads);
         for (GLsizei i = 0; i < count; ++i) {
             glDeleteShader(shads[i]);
         }
-        glDeleteProgram(it->second);
+        glDeleteProgram(it->second.id);
     }
     shaders.clear();
 }
@@ -580,7 +623,7 @@ void GLContext::Handle(Shader::ChangedEventArg arg) {
         return;
     }
 
-    GLuint oldid = shaders[arg.shader];
+    GLuint oldid = shaders[arg.shader].id;
 
     GLuint shads[2];
     GLsizei count;
@@ -589,7 +632,7 @@ void GLContext::Handle(Shader::ChangedEventArg arg) {
         glDeleteShader(shads[i]);
     }
     glDeleteProgram(oldid);
-    shaders[arg.shader] = newid;
+    shaders[arg.shader].id = newid;
 }
 
 void GLContext::Handle(Texture2DChangedEventArg arg) {

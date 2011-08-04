@@ -14,6 +14,7 @@
 #include <Core/IListener.h>
 #include <Renderers2/OpenGL/GLRenderer.h>
 #include <Renderers2/OpenGL/LightVisitor.h>
+#include <Renderers2/OpenGL/GLContext.h>
 #include <Meta/OpenGL.h>
 #include <Math/Matrix.h>
 
@@ -74,9 +75,11 @@ private:
     inline void RenderMesh(Mesh* mesh, Matrix<4,4,float> modelViewMatrix);
 
     inline void ApplyRenderState(RenderStateNode* node);
-    inline void BindUniforms(Shader* shad, GLint id);
-    inline void BindAttributes(Shader* shad, GLint id);
-    inline void BindTextures2D(Shader* shad, GLint id);
+    inline void BindUniforms(GLContext::GLShader& glshader);
+    inline void BindAttributes(GLContext::GLShader& glshader);
+    inline void UnbindAttributes(GLContext::GLShader& glshader);
+    inline void BindTextures2D(GLContext::GLShader& glshader);
+    inline void UnbindTextures2D(GLContext::GLShader& glshader);
 public:
     LightVisitor::LightSource light;
     
