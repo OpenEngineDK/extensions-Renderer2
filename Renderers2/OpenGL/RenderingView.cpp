@@ -207,19 +207,19 @@ void RenderingView::VisitTransformationNode(TransformationNode* node) {
     modelViewMatrix = m * modelViewMatrix;
 
 #if FIXED_FUNCTION
-    float f[16];
-    m.ToArray(f);
-    glPushMatrix();
-    glMultMatrixf(f);
-    CHECK_FOR_GL_ERROR();
+    // float f[16];
+    // m.ToArray(f);
+    // glPushMatrix();
+    // glMultMatrixf(f);
+    // CHECK_FOR_GL_ERROR();
 #endif
 
     node->VisitSubNodes(*this);
     CHECK_FOR_GL_ERROR();
 
 #if FIXED_FUNCTION
-    glPopMatrix();
-    CHECK_FOR_GL_ERROR();
+    // glPopMatrix();
+    // CHECK_FOR_GL_ERROR();
 #endif
     
     modelViewMatrix = oldMv;
@@ -461,7 +461,13 @@ void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
 #if FIXED_FUNCTION
 
     } else {
-    
+        
+        float f[16];
+        mvMatrix.ToArray(f);
+        glLoadIdentity();
+        glMultMatrixf(f);
+        CHECK_FOR_GL_ERROR();
+   
     GeometrySet* geom = mesh->GetGeometrySet().get();
     
     if (renderTexture && mat->Get2DTextures().size() > 0) {
