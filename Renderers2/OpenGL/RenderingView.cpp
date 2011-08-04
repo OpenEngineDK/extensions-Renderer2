@@ -407,7 +407,7 @@ if (ctx.ShaderSupport()) {
         skybox = new Shader(vert, frag);
     }
 
-    GLuint shaderId = ctx.LookupShader(skybox).id;
+    GLuint shaderId = ctx.LookupShader(skybox);
     
     skybox->SetCubemap("skybox", canvas.GetSkybox());
     Matrix<4,4,float> viewProjInv = (canvas.GetViewingVolume()->GetViewMatrix() * 
@@ -460,8 +460,7 @@ void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
         shad->SetModelViewProjectionMatrix(mvMatrix * projectionMatrix);
         shad->GetUniform("inverseNormalMatrix").Set(mvMatrix.GetReduced().GetInverse());
 
-        GLContext::GLShader glshader = ctx->LookupShader(shad);
-        shaderId = glshader.id;
+        GLuint shaderId = ctx->LookupShader(shad);
         glUseProgram(shaderId);
         BindUniforms(shad, shaderId);
         BindAttributes(shad, shaderId);
