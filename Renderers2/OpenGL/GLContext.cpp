@@ -778,7 +778,7 @@ void GLContext::Handle(Shader::ChangedEventArg arg) {
         glDeleteShader(shads[i]);
     }
     glDeleteProgram(oldid);
-    shaders[arg.shader].id = newid;
+    shaders[arg.shader] = ResolveLocations(newid, arg.shader);
 }
 
 void GLContext::Handle(Texture2DChangedEventArg arg) {
