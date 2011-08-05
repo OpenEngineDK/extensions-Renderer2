@@ -724,14 +724,27 @@ void GLContext::ReleaseTextures() {
          glDeleteTextures(1, &it2->second);
      }
 
-     map<ICubemap*, GLuint>::iterator it3 = cubemaps.begin();
-     for (; it3 != cubemaps.end(); ++it3) {
-         glDeleteTextures(1, &it3->second);
+     map<Canvas3D*, Attachments>::iterator it3 = attachments.begin();
+     for (; it3 != attachments.end(); ++it3) {
+         glDeleteTextures(1, &it3->second.depth);
+     }
+
+     map<ICubemap*, GLuint>::iterator it4 = cubemaps.begin();
+     for (; it4 != cubemaps.end(); ++it4) {
+         glDeleteTextures(1, &it4->second);
+     }
+
+     // also release fbos since attachments where released
+     map<ICanvas*, GLuint>::iterator it5 = fbos.begin();
+     for (; it5 != fbos.end(); ++it5) {
+         glDeleteFramebuffers(1, &it5->second);
      }
 
      textures.clear();
      canvases.clear();
+     attachments.clear();
      cubemaps.clear();
+     fbos.clear();
 }
 
 void GLContext::ReleaseVBOs() {
