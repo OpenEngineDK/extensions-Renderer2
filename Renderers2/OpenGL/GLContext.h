@@ -25,6 +25,7 @@ namespace OpenEngine {
     namespace Display2 {
         class ICanvas;
         class Canvas2D;
+        class Canvas3D;
     }
 namespace Renderers2 {
 namespace OpenGL {
@@ -45,6 +46,7 @@ using Resources2::Shader;
 using Resources2::Uniform;
 using Display2::ICanvas;
 using Display2::Canvas2D;
+using Display2::Canvas3D;
 using Core::IListener;
 using std::map;
 using std::vector;
@@ -73,15 +75,26 @@ public:
         map<ITexture2DPtr, GLint> textures;
         map<ICubemapPtr, GLint> cubemaps;
     };
+    struct Attachments {
+        GLuint color0;
+        GLuint depth;
+    };
+
 private:
     GLSLVersion glslversion;
     bool init, fboSupport, vboSupport, shaderSupport;
-    map<ICanvas*, GLuint> canvases;
+    map<Canvas3D*, Attachments> attachments; // color attachments and depth attachment
+    map<ICanvas*, GLuint> fbos;              // association with fbo
+    map<ICanvas*, GLuint> canvases;          // other canvases need only a single color attachment
     map<ITexture2D*, GLuint> textures;
     map<IDataBlock*, GLuint> vbos;
     map<ICubemap*, GLuint> cubemaps;
     map<Shader*, GLShader> shaders;
 
+    // GLuint LoadCanvas(ICanvas* can);
+
+    // GPU creation routines
+    Attachments LoadCanvas(Canvas3D* can, GLuint color0);
     GLuint LoadCanvas(ICanvas* can);
     GLuint LoadTexture(ITexture2D* tex);
     GLuint LoadVBO(IDataBlock* db);
@@ -98,9 +111,14 @@ public:
     bool FBOSupport();
     bool VBOSupport();
     bool ShaderSupport();
-    
+        
+    // lookup routines. If no map contains the requested object the
+    // creation routines will be invoked.
+    GLuint LookupFBO(ICanvas* can);
+    GLuint LookupFBO(Canvas3D* can);
     GLuint LookupCanvas(ICanvas* can);
     GLuint LookupCanvas(Canvas2D* can);
+    Attachments LookupCanvas(Canvas3D* can);
     GLuint LookupTexture(ITexture2D* tex);
     GLuint LookupVBO(IDataBlock* db);
     GLShader LookupShader(Shader* shad);
@@ -111,6 +129,7 @@ public:
     void ReleaseVBOs();
     void ReleaseShaders();
     
+    // conversion from OE STUFF to GL STUFF
     static GLint GLInternalColorFormat(ColorFormat f);
     static GLenum GLColorFormat(ColorFormat f);
     static GLenum GLAccessType(BlockType b, UpdateMode u);

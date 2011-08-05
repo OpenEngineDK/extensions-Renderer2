@@ -70,6 +70,7 @@ private:
     GLContext* ctx;
     ICanvas* canvas;
     bool init;
+    int level; // canvas recursion level
 
     RenderingView* rv;
     LightVisitor* lv;
@@ -87,7 +88,7 @@ private:
     Core::ProcessEventArg arg;
     
     ShaderResourcePtr quadShader;
-    
+
 public:
     GLRenderer(GLContext* ctx);
     virtual ~GLRenderer();
@@ -101,6 +102,24 @@ public:
     void Handle(Core::ProcessEventArg arg);
 
     /**
+     * Rendering stages/phases.
+     * A renderer will after construction be in the initialization
+     * stage until the InitializeEvent has occurred and all listeners
+     * have been processed. After that the phases will change after
+     * completion of each event. Thus, if \a GetCurrentStage is invoked
+     * by a listener of the \a ProcessEvent the result must be
+     * \a RENDERER_PROCESS.
+     */
+    enum RendererStage {
+		RENDERER_UNINITIALIZE,
+        RENDERER_INITIALIZE,
+        RENDERER_PREPROCESS,
+        RENDERER_PROCESS,
+        RENDERER_POSTPROCESS,
+        RENDERER_DEINITIALIZE
+    };
+
+    /**
      * Event lists for the rendering phases.
      */
     IEvent<RenderingEventArg>& InitializeEvent();
@@ -109,10 +128,21 @@ public:
     IEvent<RenderingEventArg>& PostProcessEvent();
     IEvent<RenderingEventArg>& DeinitializeEvent();
 
+    /**
+     * Get the current renderer stage.
+     */
+    RendererStage GetCurrentStage() const {
+        return stage;
+    }
+
+
     void SetCanvas(ICanvas* canvas);
     ICanvas* GetCanvas();
 
     GLContext* GetContext();
+
+protected:
+    RendererStage stage;
 
 };
 

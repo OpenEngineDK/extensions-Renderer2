@@ -40,10 +40,12 @@ GLRenderer::GLRenderer(GLContext* ctx)
     : ctx(ctx)
     , canvas(NULL)
     , init(false)
+    , level(0)
     , rv(new RenderingView())
     , lv(new LightVisitor())
     , cv(new CanvasVisitor(*this))
     , arg(Core::ProcessEventArg(Time(), 0))
+    , stage(RENDERER_UNINITIALIZE)
 {
     DirectoryManager::AppendPath("extensions/Renderer2/");
     quadShader = ResourceManager<ShaderResource>::Create("shaders/QuadShader.glsl");
@@ -59,10 +61,23 @@ GLRenderer::~GLRenderer() {
 
 void GLRenderer::Render(CompositeCanvas* canvas) {
     // logger.info << "render composite: " << canvas << logger.end;
+    ++level;
     canvas->AcceptChildren(*cv);
+    --level;
+
+    GLint prevFbo;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
+
+    if (ctx->FBOSupport() && level > 0) {
+        glBindFramebuffer(GL_FRAMEBUFFER, ctx->LookupFBO(canvas));
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ctx->LookupCanvas(canvas), 0);
+        CHECK_FRAMEBUFFER_STATUS();
+   }
+
 
     glEnable(GL_BLEND);
     glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBlendEquation(GL_FUNC_ADD);
     glActiveTexture(GL_TEXTURE0);
@@ -195,19 +210,32 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
 #endif
 
     // store resulting frame
-    glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas));
-    CHECK_FOR_GL_ERROR();
-    glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
-                     0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
-    CHECK_FOR_GL_ERROR();
+    // glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas));
+    // CHECK_FOR_GL_ERROR();
+    // glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
+    //                  0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
+    // CHECK_FOR_GL_ERROR();
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
     glColorMask (GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glDisable(GL_BLEND);
+
+    //bind the main back buffer again
+    glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
+
+
 }
 
 void GLRenderer::Render(Canvas3D* canvas) {
+    GLint prevFbo;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
+
+    if (ctx->FBOSupport() && level > 0) {
+        glBindFramebuffer(GL_FRAMEBUFFER, ctx->LookupFBO(canvas));
+    }
+
     // logger.info << "render c3d: " << canvas << logger.end;
     // @todo: assert we are in preprocess stage
     RGBAColor bgc = canvas->GetBackgroundColor();
@@ -235,23 +263,47 @@ void GLRenderer::Render(Canvas3D* canvas) {
     RenderingEventArg rarg(canvas, *this, arg.start, arg.approx);
     this->preProcess.Notify(rarg);
     
+#if OE_SAFE
+    if (lv->GetLights().empty()) throw Exception("No lights in scene. PhongShader will be confused...");
+#endif
     rv->light = lv->GetLights().at(0);
     
-    // this->stage = RENDERER_PROCESS;
+    this->stage = RENDERER_PROCESS;
     this->process.Notify(rarg);
-    // this->stage = RENDERER_POSTPROCESS;
+    this->stage = RENDERER_POSTPROCESS;
+
+    // glActiveTexture(GL_TEXTURE0);
+    // glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas).color0);
+    // CHECK_FOR_GL_ERROR();
+    // glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
+    //                  0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
+    // CHECK_FOR_GL_ERROR();
+    // glBindTexture(GL_TEXTURE_2D, 0);
+
+
     this->postProcess.Notify(rarg);
-    // this->stage = RENDERER_PREPROCESS;
+    this->stage = RENDERER_PREPROCESS;
 
 #ifndef OE_IOS
-   glActiveTexture(GL_TEXTURE0);
-   glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas));
-   CHECK_FOR_GL_ERROR();
-   glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
-                    0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
-   CHECK_FOR_GL_ERROR();
-   glBindTexture(GL_TEXTURE_2D, 0);
+   // glActiveTexture(GL_TEXTURE0);
+   // glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas).color0);
+   // CHECK_FOR_GL_ERROR();
+   // glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
+   //                  0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
+   // CHECK_FOR_GL_ERROR();
+   // glBindTexture(GL_TEXTURE_2D, 0);
 #endif
+
+
+    // glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, ctx->LookupFBO(canvas));
+    // glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, 0);
+    // glBlitFramebufferEXT(0, 0, canvas->GetWidth(), canvas->GetHeight(), 
+    //                      0, 0, canvas->GetWidth(), canvas->GetHeight(), 
+    //                      GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    // glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, 0);
+
+    //bind the main back buffer again
+    glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
 }
 
 void GLRenderer::Handle(Core::InitializeEventArg arg) {
@@ -259,12 +311,13 @@ void GLRenderer::Handle(Core::InitializeEventArg arg) {
     // Enable depth testing
     glEnable(GL_DEPTH_TEST);						   
     CHECK_FOR_GL_ERROR();
+
+#if FIXED_FUNCTION
     // Set perspective calculations to most accurate
 #ifndef OE_IOS
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 #endif
 
-#if FIXED_FUNCTION
     glShadeModel(GL_SMOOTH);
     CHECK_FOR_GL_ERROR();
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
@@ -272,9 +325,9 @@ void GLRenderer::Handle(Core::InitializeEventArg arg) {
     GLfloat global_ambient[] = { 0.5f, 0.5f, 0.5f, 1.0f };
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
 #endif
-    // this->stage = RENDERER_INITIALIZE;
+    this->stage = RENDERER_INITIALIZE;
     this->initialize.Notify(RenderingEventArg(NULL, *this));
-    //this->stage = RENDERER_PREPROCESS;
+    this->stage = RENDERER_PREPROCESS;
     CHECK_FOR_GL_ERROR();
 
     // traverse scene graph to load gpu resource.
@@ -290,6 +343,7 @@ void GLRenderer::Handle(Core::DeinitializeEventArg arg) {
 void GLRenderer::Handle(Core::ProcessEventArg arg) {
     this->arg = arg;
     canvas->Accept(*cv);
+
 }
 
 IEvent<RenderingEventArg>& GLRenderer::InitializeEvent() {

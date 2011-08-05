@@ -10,11 +10,13 @@
 #include <Renderers2/OpenGL/CanvasVisitor.h>
 #include <Renderers2/OpenGL/GLRenderer.h>
 #include <Renderers2/OpenGL/GLContext.h>
+#include <Display2/Canvas2D.h>
 
 namespace OpenEngine {
 namespace Renderers2 {
 namespace OpenGL {
 
+using Display2::Canvas2D;
 
 CanvasVisitor::CanvasVisitor(GLRenderer& renderer): renderer(renderer) {
   
@@ -35,7 +37,6 @@ void CanvasVisitor::Visit(Canvas3D* canvas) {
 void CanvasVisitor::Visit(CompositeCanvas* canvas) {
     renderer.Render(canvas);
 }
-
 
 
 } // NS OpenGL
