@@ -33,11 +33,12 @@ FXAAShader::FXAAShader()
     vertices[2] = -1.0;
     vertices[3] = -1.0;
 
+    vertices[6] = 1.0;
+    vertices[7] = 1.0;
+
     vertices[4] = 1.0;
     vertices[5] = -1.0;
 
-    vertices[6] = 1.0;
-    vertices[7] = 1.0;
 
     const string shaderFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/TinyFxaa.glsl");
 
@@ -69,16 +70,16 @@ void FXAAShader::Handle(RenderingEventArg arg) {
     if (!arg.renderer.GetContext()->ShaderSupport()) return; 
 
 
-    GLint shaderId = arg.renderer.GetContext()->LookupShader(this).id;
-    GLint screenId = arg.renderer.GetContext()->LookupCanvas(arg.canvas);
+    GLuint shaderId = arg.renderer.GetContext()->LookupShader(this).id;
+    GLuint screenId = arg.renderer.GetContext()->LookupCanvas(arg.canvas).color0;
 
     // copy backbuffer to screen tex
     glActiveTexture(GL_TEXTURE0);
     CHECK_FOR_GL_ERROR();
     glBindTexture(GL_TEXTURE_2D, screenId);
     CHECK_FOR_GL_ERROR();
-    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, arg.canvas->GetWidth(), arg.canvas->GetHeight(), 0);
-    CHECK_FOR_GL_ERROR();
+    // glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, arg.canvas->GetWidth(), arg.canvas->GetHeight(), 0);
+    // CHECK_FOR_GL_ERROR();
 
     glDisable(GL_DEPTH_TEST);
         
