@@ -15,6 +15,9 @@
 #include <Display2/Canvas2D.h>
 #include <Display2/Canvas3D.h>
 
+#include <Resources/ITexture2D.h>
+#include <Resources/Texture2D.h>
+
 #include <Logging/Logger.h>
 
 namespace OpenEngine {
@@ -25,6 +28,9 @@ using namespace Resources;
 using Resources2::Uniform;
 using Resources2::Shader;
 using Display2::ICanvas;
+
+using Resources::ITexture2DPtr;
+using Resources::Texture2D;
 
 using namespace std;
 
@@ -246,8 +252,8 @@ GLuint GLContext::LookupFBO(Canvas3D* can) {
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
     // create the framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, atts.color0, 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, atts.depth, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, LookupTexture(atts.color0.get()), 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, LookupTexture(atts.depth.get()), 0);
     CHECK_FRAMEBUFFER_STATUS();
     //bind the main back buffer again
     glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
@@ -295,14 +301,13 @@ GLContext::Attachments GLContext::LoadCanvas(Canvas3D* can, GLuint color0) {
 
     GLContext::Attachments atts;
 
-    // color0
-    if (color0) {
-        atts.color0 = color0;
-    } 
-    else {
-        glGenTextures(1, &atts.color0);
+    atts.color0 = ITexture2DPtr(new Texture2D<unsigned char>());
+    atts.depth = ITexture2DPtr(new Texture2D<float>());
+
+    if (!color0) {
+        glGenTextures(1, &color0);
         CHECK_FOR_GL_ERROR();
-        glBindTexture(GL_TEXTURE_2D, atts.color0);
+        glBindTexture(GL_TEXTURE_2D, color0);
         
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -314,13 +319,14 @@ GLContext::Attachments GLContext::LoadCanvas(Canvas3D* can, GLuint color0) {
                      can->GetWidth(), can->GetHeight(), 0, format, 
                      GL_UNSIGNED_BYTE, NULL);
         CHECK_FOR_GL_ERROR();
-        //glBindTexture(GL_TEXTURE_2D, 0);
     }
+    textures[atts.color0.get()] = color0;
     
     // depth
-    glGenTextures(1, &atts.depth);
+    GLuint depth;
+    glGenTextures(1, &depth);
     CHECK_FOR_GL_ERROR();
-    glBindTexture(GL_TEXTURE_2D, atts.depth);
+    glBindTexture(GL_TEXTURE_2D, depth);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -331,7 +337,7 @@ GLContext::Attachments GLContext::LoadCanvas(Canvas3D* can, GLuint color0) {
                  can->GetWidth(), can->GetHeight(), 0, GL_DEPTH_COMPONENT, 
                  GL_FLOAT, NULL);
     glBindTexture(GL_TEXTURE_2D, 0);
-
+    textures[atts.depth.get()] = depth;
     return atts;
 }
 
@@ -362,7 +368,7 @@ GLContext::Attachments GLContext::LookupCanvas(Canvas3D* can) {
     if (it2 != canvases.end())
         color0 = it2->second;
     GLContext::Attachments atts = LoadCanvas(can, color0);
-    canvases[can] = atts.color0;
+    canvases[can] = LookupTexture(atts.color0.get());
     attachments[can] = atts;
     
     return atts;
@@ -724,10 +730,10 @@ void GLContext::ReleaseTextures() {
          glDeleteTextures(1, &it2->second);
      }
 
-     map<Canvas3D*, Attachments>::iterator it3 = attachments.begin();
-     for (; it3 != attachments.end(); ++it3) {
-         glDeleteTextures(1, &it3->second.depth);
-     }
+     // map<Canvas3D*, Attachments>::iterator it3 = attachments.begin();
+     // for (; it3 != attachments.end(); ++it3) {
+     //     glDeleteTextures(1, &it3->second.depth);
+     // }
 
      map<ICubemap*, GLuint>::iterator it4 = cubemaps.begin();
      for (; it4 != cubemaps.end(); ++it4) {

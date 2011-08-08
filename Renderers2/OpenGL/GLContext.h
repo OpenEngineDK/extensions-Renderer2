@@ -76,8 +76,7 @@ public:
         map<ICubemapPtr, GLint> cubemaps;
     };
     struct Attachments {
-        GLuint color0;
-        GLuint depth;
+        ITexture2DPtr color0, depth;
     };
 
 private:

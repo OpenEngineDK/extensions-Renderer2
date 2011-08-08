@@ -16,6 +16,8 @@
 #include <Utils/Timer.h>
 #include <Math/RGBAColor.h>
 
+#include <Renderers2/OpenGL/GLContext.h>
+
 namespace OpenEngine {
     namespace Display {
         class IViewingVolume;
@@ -28,6 +30,7 @@ namespace OpenEngine {
 
     namespace Resources2 {
         class ShaderResource;
+        class Shader;
         typedef boost::shared_ptr<ShaderResource> ShaderResourcePtr;
     }
 namespace Renderers2 {
@@ -37,13 +40,13 @@ using Display2::ICanvas;
 using Display2::CompositeCanvas;
 using Display2::Canvas3D;
 using Resources2::ShaderResourcePtr;
+using Resources2::Shader;
 using Utils::Time;
 using Core::IModule;
 using Core::IEvent;
 using Core::Event;
 using Math::RGBAColor;
 
-class GLContext;
 class GLRenderer;
 class RenderingView;
 class LightVisitor;
@@ -85,6 +88,12 @@ private:
 
     void ApplyViewingVolume(Display::IViewingVolume& volume);
 
+    void BindUniforms(GLContext::GLShader& glshader);
+    void BindAttributes(GLContext::GLShader& glshader);
+    void UnbindAttributes(GLContext::GLShader& glshader);
+    void BindTextures2D(GLContext::GLShader& glshader);
+    void UnbindTextures2D(GLContext::GLShader& glshader);
+
     Core::ProcessEventArg arg;
     
     ShaderResourcePtr quadShader;
@@ -96,6 +105,10 @@ public:
     // propably the only interface method for a renderer
     void Render(Canvas3D* canvas);
     void Render(CompositeCanvas* canvas);
+    // void Render(Shader* shader, Canvas3D* canvas = NULL);
+
+    GLuint Apply(Shader* shader);
+    void Release(Shader* shader);
 
     void Handle(Core::InitializeEventArg arg);
     void Handle(Core::DeinitializeEventArg arg);
@@ -140,6 +153,7 @@ public:
     ICanvas* GetCanvas();
 
     GLContext* GetContext();
+
 
 protected:
     RendererStage stage;

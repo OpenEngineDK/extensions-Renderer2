@@ -15,6 +15,8 @@ ADD_LIBRARY(Extensions_Renderers2
   Renderers2/OpenGL/LightVisitor.cpp
   Renderers2/OpenGL/GLContext.h
   Renderers2/OpenGL/GLContext.cpp
+  Renderers2/OpenGL/ShadowMap.h
+  Renderers2/OpenGL/ShadowMap.cpp
   Resources2/Shader.h
   Resources2/Shader.cpp
   Resources2/ShaderResource.h

@@ -40,6 +40,7 @@ using Resources2::PhongShader;
  */
 RenderingView::RenderingView()
     : ctx(NULL)
+    , renderer(NULL)
     , currentRenderState(new RenderStateNode())
     , renderTexture(true)
     , renderShader(true)
@@ -69,6 +70,7 @@ void RenderingView::Handle(RenderingEventArg arg) {
     modelViewMatrix = arg.canvas->GetViewingVolume()->GetViewMatrix();
     projectionMatrix = arg.canvas->GetViewingVolume()->GetProjectionMatrix();
     ctx = arg.renderer.GetContext();
+    renderer = &arg.renderer;
 
     // Setup skybox
     if (arg.canvas->GetSkybox())
@@ -86,6 +88,7 @@ void RenderingView::Handle(RenderingEventArg arg) {
     transparencyQueue.clear();
 
     ctx = NULL;
+    renderer = NULL;
 }
             
 void RenderingView::ApplyRenderState(RenderStateNode* node) {
@@ -225,112 +228,6 @@ void RenderingView::VisitTransformationNode(TransformationNode* node) {
     modelViewMatrix = oldMv;
 }
 
-void RenderingView::BindUniforms(GLContext::GLShader& glshader) {
-    map<Uniform*, GLint>::iterator it = glshader.uniforms.begin();
-    for (; it != glshader.uniforms.end(); ++it) {
-        GLint loc = it->second; 
-        Uniform& uniform = *it->first;
-        const Uniform::Data data = uniform.GetData();
-        switch (uniform.GetKind()) {
-        case Uniform::INT:
-            glUniform1i(loc, data.i);
-            break;
-        case Uniform::FLOAT:
-            glUniform1f(loc, data.f);
-            break;
-        case Uniform::FLOAT2:
-            glUniform2fv(loc, 1, data.fv);
-            break;
-        case Uniform::FLOAT3:
-            glUniform3fv(loc, 1, data.fv);
-            break;
-        case Uniform::FLOAT4:
-            glUniform4fv(loc, 1, data.fv);
-            break;
-        case Uniform::MAT3X3:
-            glUniformMatrix3fv(loc, 1, false, data.fv);
-            break;
-        case Uniform::MAT4X4:
-            glUniformMatrix4fv(loc, 1, false, data.fv);
-            break;            
-        case Uniform::UNKNOWN:
-#if OE_SAFE
-            throw Exception("Unknown uniform kind.");
-#endif
-            break;
-        }
-        CHECK_FOR_GL_ERROR();
-    }
-}
-
-void RenderingView::BindAttributes(GLContext::GLShader& glshader) {
-    map<IDataBlockPtr, GLint>::iterator it = glshader.attributes.begin();
-    for (; it != glshader.attributes.end(); ++it) {
-        GLint loc = it->second;
-        IDataBlock* db = it->first.get();
-        if (ctx->VBOSupport()) {
-            glBindBuffer(GL_ARRAY_BUFFER, ctx->LookupVBO(db));
-            glEnableVertexAttribArray(loc);
-            glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, 0);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-        }
-        else {
-            glEnableVertexAttribArray(loc);
-            IDataBlock* db = it->first.get();
-            glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, db->GetVoidData());
-        }
-        CHECK_FOR_GL_ERROR();
-    }
-}
-
-void RenderingView::UnbindAttributes(GLContext::GLShader& glshader) {
-    map<IDataBlockPtr, GLint>::iterator it = glshader.attributes.begin();
-    for (; it != glshader.attributes.end(); ++it) {
-        glDisableVertexAttribArray(it->second);
-        CHECK_FOR_GL_ERROR();
-    }
-}
-
-void RenderingView::BindTextures2D(GLContext::GLShader& glshader) {
-    map<ITexture2DPtr, GLint>::iterator tex_it = glshader.textures.begin();
-    GLint texUnit = 0;
-    for (; tex_it != glshader.textures.end(); ++tex_it) {
-        GLint loc = tex_it->second;
-        glActiveTexture(GL_TEXTURE0 + texUnit);
-        CHECK_FOR_GL_ERROR();
-        glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(tex_it->first.get()));
-        CHECK_FOR_GL_ERROR();
-        glUniform1i(loc, texUnit++);
-        CHECK_FOR_GL_ERROR();
-    }
-
-    map<ICubemapPtr, GLint>::iterator cube_it = glshader.cubemaps.begin();
-    for (; cube_it != glshader.cubemaps.end(); ++cube_it) {
-        GLint loc = cube_it->second;
-        glActiveTexture(GL_TEXTURE0 + texUnit);
-        CHECK_FOR_GL_ERROR();
-        glBindTexture(GL_TEXTURE_CUBE_MAP, ctx->LookupCubemap(cube_it->first.get()));
-        CHECK_FOR_GL_ERROR();
-        glUniform1i(loc, texUnit++);
-        CHECK_FOR_GL_ERROR();        
-    }    
-}
-
-void RenderingView::UnbindTextures2D(GLContext::GLShader& glshader) {
-    GLint texUnit = 0;
-    for (unsigned int i = 0; i < glshader.textures.size(); ++i) {
-        glActiveTexture(GL_TEXTURE0 + texUnit);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        CHECK_FOR_GL_ERROR();
-        ++texUnit;
-    }
-    for (unsigned int i = 0; i < glshader.cubemaps.size(); ++i) {
-        glActiveTexture(GL_TEXTURE0 + texUnit);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-        CHECK_FOR_GL_ERROR();
-        ++texUnit;
-    }
-}
 
 /**
  * Process a mesh node.
@@ -380,22 +277,24 @@ if (ctx.ShaderSupport()) {
         skybox = new Shader(vert, frag);
     }
 
-    GLContext::GLShader glshader= ctx.LookupShader(skybox);
-    
     skybox->SetCubemap("skybox", canvas.GetSkybox());
     Matrix<4,4,float> viewProjInv = (canvas.GetViewingVolume()->GetViewMatrix() * 
                                      canvas.GetViewingVolume()->GetProjectionMatrix()).GetInverse();
     skybox->GetUniform("oe_ViewProjMatrixInverse").Set(viewProjInv);
 
-    glUseProgram(glshader.id);
-    BindUniforms(glshader);
+    renderer->Apply(skybox);
+
 #ifndef OE_IOS
     glRecti(-1,-1,1,1);
 #endif
-    glUseProgram(0);
+
+    renderer->Release(skybox);
+    glEnable(GL_DEPTH_TEST);
+
 #if FIXED_FUNCTION
  }        
 #endif
+
 }
 
 void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
@@ -434,12 +333,8 @@ void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
         shad->SetModelViewMatrix(mvMatrix);
         shad->SetModelViewProjectionMatrix(mvMatrix * projectionMatrix);
 
-        GLContext::GLShader glshader = ctx->LookupShader(shad);
-        glUseProgram(glshader.id);
-        BindUniforms(glshader);
-        BindAttributes(glshader);
-        BindTextures2D(glshader);
-
+        renderer->Apply(shad);
+        
         if (ctx->VBOSupport()) {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ctx->LookupVBO(indices));
             glDrawElements(type, 
@@ -454,9 +349,7 @@ void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
                            indices->GetType(), 
                            (char*)indices->GetVoidDataPtr() + offset * GLContext::GLTypeSize(indices->GetType()));
         }
-        UnbindAttributes(glshader);        
-        UnbindTextures2D(glshader);        
-        glUseProgram(0);
+        renderer->Release(shad);
         
 #if FIXED_FUNCTION
 

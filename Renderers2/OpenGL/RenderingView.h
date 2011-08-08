@@ -55,6 +55,7 @@ class RenderingView
     : public ISceneNodeVisitor, public IListener<RenderingEventArg> {
 private:
     GLContext* ctx;
+    GLRenderer* renderer;
     RenderStateNode* currentRenderState;
     // bool renderBinormal, renderTangent, renderSoftNormal, renderHardNormal;
     bool renderTexture, renderShader;
