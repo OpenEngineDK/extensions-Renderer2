@@ -74,7 +74,6 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
         CHECK_FRAMEBUFFER_STATUS();
    }
 
-
     glEnable(GL_BLEND);
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
@@ -209,23 +208,23 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
     }
 #endif
 
-    // store resulting frame
-    // glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas));
-    // CHECK_FOR_GL_ERROR();
-    // glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
-    //                  0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
-    // CHECK_FOR_GL_ERROR();
+    if (ctx->FBOSupport() && level > 0) {
+        //bind the previous back buffer again
+        glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
+    }
+    else {
+        glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas));
+        CHECK_FOR_GL_ERROR();
+        glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
+                         0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
+        CHECK_FOR_GL_ERROR();
+    }
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
     glColorMask (GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glDisable(GL_BLEND);
-
-    //bind the main back buffer again
-    glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
-
-
 }
 
 void GLRenderer::Render(Canvas3D* canvas) {
@@ -271,39 +270,22 @@ void GLRenderer::Render(Canvas3D* canvas) {
     this->stage = RENDERER_PROCESS;
     this->process.Notify(rarg);
     this->stage = RENDERER_POSTPROCESS;
-
-    // glActiveTexture(GL_TEXTURE0);
-    // glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas).color0);
-    // CHECK_FOR_GL_ERROR();
-    // glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
-    //                  0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
-    // CHECK_FOR_GL_ERROR();
-    // glBindTexture(GL_TEXTURE_2D, 0);
-
-
     this->postProcess.Notify(rarg);
     this->stage = RENDERER_PREPROCESS;
 
-#ifndef OE_IOS
-   // glActiveTexture(GL_TEXTURE0);
-   // glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas).color0);
-   // CHECK_FOR_GL_ERROR();
-   // glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
-   //                  0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
-   // CHECK_FOR_GL_ERROR();
-   // glBindTexture(GL_TEXTURE_2D, 0);
-#endif
-
-
-    // glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, ctx->LookupFBO(canvas));
-    // glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, 0);
-    // glBlitFramebufferEXT(0, 0, canvas->GetWidth(), canvas->GetHeight(), 
-    //                      0, 0, canvas->GetWidth(), canvas->GetHeight(), 
-    //                      GL_COLOR_BUFFER_BIT, GL_NEAREST);
-    // glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, 0);
-
-    //bind the main back buffer again
-    glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
+    if (ctx->FBOSupport() && level > 0) {
+        //bind the previous back buffer again
+        glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
+    }
+    else {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas).color0);
+        CHECK_FOR_GL_ERROR();
+        glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
+                         0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
+        CHECK_FOR_GL_ERROR();
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 }
 
 void GLRenderer::Handle(Core::InitializeEventArg arg) {
