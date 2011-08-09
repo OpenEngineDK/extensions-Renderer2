@@ -81,11 +81,13 @@ void RenderingView::Handle(RenderingEventArg arg) {
     arg.canvas->GetScene()->Accept(*this);
     
     // process transparent meshes
-    vector<RenderObject>::iterator it = transparencyQueue.begin();
+    glDepthMask(GL_FALSE);
+    vector<RenderObject>::iterator it = transparencyQueue.begin();    
     for (; it != transparencyQueue.end(); ++it) {
         RenderMesh(it->mesh, it->modelViewMatrix);
     }         
     transparencyQueue.clear();
+    glDepthMask(GL_TRUE);
 
     ctx = NULL;
     renderer = NULL;

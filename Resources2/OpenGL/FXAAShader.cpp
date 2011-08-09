@@ -55,6 +55,10 @@ FXAAShader::~FXAAShader() {
 }
 
 void FXAAShader::Handle(RenderingEventArg arg) {
+    GLContext* ctx = arg.renderer.GetContext();
+    // this is a hack! Module should not be added in the first place if shader is not supported.
+    if (!ctx->ShaderSupport()) return; 
+
     if (arg.renderer.GetCurrentStage() == GLRenderer::RENDERER_INITIALIZE) {
         const float verts[4*2] = {
             -1.0f, 1.0f,
@@ -69,12 +73,6 @@ void FXAAShader::Handle(RenderingEventArg arg) {
     }
     if (!active) return;
     
-
-    // this is a hack! Module should not be added in the first place if shader is not supported.
-    if (!arg.renderer.GetContext()->ShaderSupport()) return; 
-
-    GLContext* ctx = arg.renderer.GetContext();
-
     GLContext::Attachments& atts = ctx->LookupCanvas(arg.canvas);
     texA.Set(atts.color0);
     rcpFrame.Set(Vector<2,float>(1.0f / arg.canvas->GetWidth(), 1.0f / arg.canvas->GetHeight()));    

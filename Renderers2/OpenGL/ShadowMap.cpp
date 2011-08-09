@@ -182,8 +182,11 @@ void ShadowMap::SetViewingVolume(IViewingVolume* v) {
 }
 
 void ShadowMap::Handle(RenderingEventArg arg) {
+    GLContext* ctx = arg.renderer.GetContext();
+    // this is a hack! Module should not be added in the first place if shader is not supported.
+    if (!ctx->ShaderSupport()) return; 
     if (arg.renderer.GetCurrentStage() == GLRenderer::RENDERER_INITIALIZE) {
-        depthRenderer.Initialize(arg.renderer.GetContext(), shader.get());
+        depthRenderer.Initialize(ctx, shader.get());
         
         const float verts[8] = {
             -1.0f, 1.0f,
@@ -198,7 +201,7 @@ void ShadowMap::Handle(RenderingEventArg arg) {
     // else if (arg.renderer.GetCurrentStage() == GLRenderer::RENDERER_PREPROCESS) {
     // }
     else {           
-        depthRenderer.Render(arg.canvas->GetScene(), *viewingVolume, arg.renderer.GetContext());
+        depthRenderer.Render(arg.canvas->GetScene(), *viewingVolume, ctx);
         
         const Matrix<4,4,float> bias(.5, .0, .0,  .0,
                                      .0, .5, .0,  .0,
@@ -219,7 +222,6 @@ void ShadowMap::Handle(RenderingEventArg arg) {
         
         GLint prevFbo; 
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
-        GLContext* ctx = arg.renderer.GetContext();
         GLint fbo = ctx->LookupFBO(arg.canvas);
         
         if (prevFbo == fbo) {
