@@ -97,7 +97,7 @@ PhongShader::PhongShader(Mesh* mesh)
     if (ambient) {
         AddDefine("AMBIENT_MAP");
         AddDefine("AMBIENT_INDEX", mat->GetUVIndex(ambient));
-        SetTexture2D("ambientMap", ambient);
+        GetTexture2D("ambientMap").Set(ambient);
 
     //     logger.info << "ambient index: " << mat->GetUVIndex(ambient) << logger.end;
     }
@@ -105,14 +105,14 @@ PhongShader::PhongShader(Mesh* mesh)
     if (diffuse) {
         AddDefine("DIFFUSE_MAP");
         AddDefine("DIFFUSE_INDEX", mat->GetUVIndex(diffuse));
-        SetTexture2D("diffuseMap", diffuse);
+        GetTexture2D("diffuseMap").Set(diffuse);
         // logger.info << "diffuse index: " << mat->GetUVIndex(diffuse) << logger.end;
     }
 
     if (specular) {
         AddDefine("SPECULAR_MAP");
         AddDefine("SPECULAR_INDEX", mat->GetUVIndex(specular));
-        SetTexture2D("specularMap", specular);
+        GetTexture2D("specularMap").Set(specular);
 
         // logger.info << "specular index: " << mat->GetUVIndex(specular) << logger.end;
     }
@@ -121,14 +121,14 @@ PhongShader::PhongShader(Mesh* mesh)
         // logger.info << "bump channels: " << (unsigned int)bump->GetChannels() << logger.end;
         AddDefine("BUMP_MAP");
         AddDefine("BUMP_INDEX", mat->GetUVIndex(bump));
-        SetTexture2D("bumpMap", bump);
+        GetTexture2D("bumpMap").Set(bump);
         // logger.info << "bump index: " << mat->GetUVIndex(bump) << logger.end;
     }    
 
     if (opacity) {
         AddDefine("OPACITY_MAP");
         AddDefine("OPACITY_INDEX", mat->GetUVIndex(opacity));
-        SetTexture2D("opacityMap", opacity);
+        GetTexture2D("opacityMap").Set(opacity);
         // logger.info << "opacity index: " << mat->GetUVIndex(diffuse) << logger.end;
     }
 
@@ -139,7 +139,7 @@ PhongShader::PhongShader(Mesh* mesh)
     
     for (; itr1 != attribs.end(); ++itr1) {
         // logger.info << "attrib: " << itr->first << logger.end;
-        SetAttribute(itr1->first, itr1->second);
+        GetAttribute(itr1->first).Set(itr1->second);
     }
 
     Resources::IDataBlockList tcs = mesh->GetGeometrySet()->GetTexCoords();
@@ -149,12 +149,12 @@ PhongShader::PhongShader(Mesh* mesh)
     unsigned int count = 0;
 
     if (tcs.size() == 1) {
-        SetAttribute("texCoord", *itr2);        
+        GetAttribute("texCoord").Set(*itr2);        
         count = 1;
     }
     else {
         for (; itr2 != tcs.end(); ++itr2) {
-            SetAttribute("texCoord[" + Utils::Convert::ToString<unsigned int>(count) + "]", *itr2);
+            GetAttribute("texCoord[" + Utils::Convert::ToString<unsigned int>(count) + "]").Set(*itr2);
             ++count;
         }
     }
@@ -166,10 +166,10 @@ PhongShader::PhongShader(Mesh* mesh)
         }
     }
     
-    if (!(bump && tans && bitans)) {
-        UnsetAttribute("tangent");
-        UnsetAttribute("bitangent");
-    }
+    // if (!(bump && tans && bitans)) {
+    //     UnsetAttribute("tangent");
+    //     UnsetAttribute("bitangent");
+    // }
 
     // set material
 
@@ -180,7 +180,7 @@ PhongShader::PhongShader(Mesh* mesh)
     
     map<string, ICubemapPtr> cubemaps = mat->GetCubemaps();
     if (cubemaps.begin() != cubemaps.end()) {
-        SetCubemap("cubeMap", cubemaps.begin()->second);
+        GetCubemap("cubeMap").Set(cubemaps.begin()->second);
         AddDefine("CUBE_MAP");
     }
 

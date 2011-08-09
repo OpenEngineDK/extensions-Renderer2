@@ -293,8 +293,8 @@ GLContext::Attachments GLContext::LoadCanvas(ICanvas* can) {
 
     atts.color0 = ITexture2DPtr(new Texture2D<unsigned char>(can->GetWidth(), can->GetHeight(), can->GetColorFormat(), 3));
     atts.color1 = ITexture2DPtr(new Texture2D<unsigned char>(can->GetWidth(), can->GetHeight(), can->GetColorFormat(), 3));
-    atts.depth0 = ITexture2DPtr(new Texture2D<float>(can->GetWidth(), can->GetHeight(), DEPTH, 1));
-    atts.depth1 = ITexture2DPtr(new Texture2D<float>(can->GetWidth(), can->GetHeight(), DEPTH, 1));
+    atts.depth = ITexture2DPtr(new Texture2D<float>(can->GetWidth(), can->GetHeight(), DEPTH, 1));
+    // atts.depth1 = ITexture2DPtr(new Texture2D<float>(can->GetWidth(), can->GetHeight(), DEPTH, 1));
 
     // if (!color0) {
     //     glGenTextures(1, &color0);
@@ -671,33 +671,102 @@ GLuint GLContext::LoadShader(Shader* shad) {
 GLContext::GLShader GLContext::ResolveLocations(GLuint id, Shader* shad) {
     GLContext::GLShader glshader;
     glshader.id = id;
-    Shader::UniformIterator uni_it = shad->UniformsBegin();
-    for (; uni_it != shad->UniformsEnd(); ++uni_it) {
-        GLint loc = glGetUniformLocation(id, uni_it->first.c_str());
-        if (loc == -1) continue;
-        glshader.uniforms[&uni_it->second] = loc;
-    }
+    
+    GLint count, maxLength;
+    glGetProgramiv(id,
+                   GL_ACTIVE_UNIFORMS,
+                   &count);
+    glGetProgramiv(id,
+                   GL_ACTIVE_UNIFORM_MAX_LENGTH,
+                   &maxLength);
 
-    Shader::AttributeIterator attr_it = shad->AttributesBegin();
-    for (; attr_it != shad->AttributesEnd(); ++attr_it) {
-        GLint loc = glGetAttribLocation(id, attr_it->first.c_str());
-        if (loc == -1) continue;
-        glshader.attributes[attr_it->second] = loc;        
-    }
+    char* name = new char[maxLength+1];
+    GLint out, size;
+    GLenum type;
+    for (int i = 0; i < count; ++i) {
+        glGetActiveUniform(id,
+                           i,
+                           maxLength,
+                           &out,
+                           &size,
+                           &type,
+                           name);
+        // logger.info << "type: " << type << logger.end;
+        // logger.info << "unif: " << string(name) << logger.end;
+        switch(type) {
+        case GL_SAMPLER_2D:
+        case GL_SAMPLER_2D_SHADOW:
+            // logger.info << "sampler2d(shadow)" << logger.end;
+            glshader.textures.push_back(make_pair(&shad->GetTexture2D(string(name)), i));
+            break;
+        case GL_SAMPLER_CUBE:
+                // logger.info << "samplercube" << logger.end;
+                glshader.cubemaps.push_back(make_pair(&shad->GetCubemap(string(name)), i));
+                break;
+        default:
+            glshader.uniforms.push_back(make_pair(&shad->GetUniform(string(name)), i));
+        }
+    } 
+    delete[] name; 
 
-    Shader::Texture2DIterator tex_it = shad->Textures2DBegin();
-    for (; tex_it != shad->Textures2DEnd(); ++tex_it) {
-        GLint loc = glGetUniformLocation(id, tex_it->first.c_str());
-        if (loc == -1) continue;
-        glshader.textures[tex_it->second] = loc;        
-    }
 
-    Shader::CubemapIterator cube_it = shad->CubemapsBegin();
-    for (; cube_it != shad->CubemapsEnd(); ++cube_it) {
-        GLint loc = glGetUniformLocation(id, cube_it->first.c_str());
+    // Attributes
+    glGetProgramiv(id,
+                   GL_ACTIVE_ATTRIBUTES,
+                   &count);
+    glGetProgramiv(id,
+                   GL_ACTIVE_ATTRIBUTE_MAX_LENGTH,
+                   &maxLength);
+    name = new char[maxLength+1];
+
+    vector<string> names(count);
+    for (int i = 0; i < count; ++i) {
+        glGetActiveAttrib(id,
+                          i,
+                          maxLength,
+                          &out,
+                          &size,
+                          &type,
+                          name);
+        names.push_back(string(name));
+    } 
+    delete[] name; 
+
+    // Double check the names and locations... since they were not correct on linux :(
+    vector<string>::iterator it = names.begin();
+    for (; it != names.end(); ++it) {
+        GLint loc = glGetAttribLocation(id, it->c_str());
         if (loc == -1) continue;
-        glshader.cubemaps[cube_it->second] = loc;        
+        glshader.attributes.push_back(make_pair(&shad->GetAttribute(*it), loc)); 
+        
     }
+    // Shader::UniformIterator uni_it = shad->UniformsBegin();
+    // for (; uni_it != shad->UniformsEnd(); ++uni_it) {
+    //     GLint loc = glGetUniformLocation(id, uni_it->first.c_str());
+    //     if (loc == -1) continue;
+    //     glshader.uniforms[&uni_it->second] = loc;
+    // }
+
+    // Shader::AttributeIterator attr_it = shad->AttributesBegin();
+    // for (; attr_it != shad->AttributesEnd(); ++attr_it) {
+    //     GLint loc = glGetAttribLocation(id, attr_it->first.c_str());
+    //     if (loc == -1) continue;
+    //     glshader.attributes.push_back(make_pair(attr_it->second, loc)); 
+    // }
+
+    // Shader::Texture2DIterator tex_it = shad->Textures2DBegin();
+    // for (; tex_it != shad->Textures2DEnd(); ++tex_it) {
+    //     GLint loc = glGetUniformLocation(id, tex_it->first.c_str());
+    //     if (loc == -1) continue;
+    //     glshader.textures.push_back(make_pair([tex_it->second] = loc;
+    // }
+
+    // Shader::CubemapIterator cube_it = shad->CubemapsBegin();
+    // for (; cube_it != shad->CubemapsEnd(); ++cube_it) {
+    //     GLint loc = glGetUniformLocation(id, cube_it->first.c_str());
+    //     if (loc == -1) continue;
+    //     glshader.cubemaps[cube_it->second->Get()] = loc;        
+    // }
 
     return glshader;
 }

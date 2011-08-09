@@ -277,7 +277,7 @@ if (ctx.ShaderSupport()) {
         skybox = new Shader(vert, frag);
     }
 
-    skybox->SetCubemap("skybox", canvas.GetSkybox());
+    skybox->GetCubemap("skybox").Set(canvas.GetSkybox());
     Matrix<4,4,float> viewProjInv = (canvas.GetViewingVolume()->GetViewMatrix() * 
                                      canvas.GetViewingVolume()->GetProjectionMatrix()).GetInverse();
     skybox->GetUniform("oe_ViewProjMatrixInverse").Set(viewProjInv);
@@ -344,9 +344,9 @@ void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         }
         else {
-            glDrawElements(type, 
-                           count, 
-                           indices->GetType(), 
+            glDrawElements(type,
+                           count,
+                           indices->GetType(),
                            (char*)indices->GetVoidDataPtr() + offset * GLContext::GLTypeSize(indices->GetType()));
         }
         renderer->Release(shad);

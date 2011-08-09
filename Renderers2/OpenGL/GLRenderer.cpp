@@ -68,7 +68,6 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
 
     if (ctx->FBOSupport() && level > 0) {
         // logger.info << "hip!" << logger.end;
-
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
         glBindFramebuffer(GL_FRAMEBUFFER, ctx->LookupFBO(canvas));
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 
@@ -240,7 +239,7 @@ void GLRenderer::Render(Canvas3D* canvas) {
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 
                                ctx->LookupTexture(ctx->LookupCanvas(canvas).color0.get()), 0);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, 
-                               ctx->LookupTexture(ctx->LookupCanvas(canvas).depth0.get()), 0);
+                               ctx->LookupTexture(ctx->LookupCanvas(canvas).depth.get()), 0);
     }
 
     // logger.info << "render c3d: " << canvas << logger.end;
@@ -255,12 +254,9 @@ void GLRenderer::Render(Canvas3D* canvas) {
     // If no viewing volume is set for the viewport ignore it.
     if (volume != NULL) {
         volume->SignalRendering(arg.approx);
-
         // Set viewport size 
-        Vector<4,int> d(0, 0, canvas->GetWidth(), canvas->GetHeight());
-        glViewport((GLsizei)d[0], (GLsizei)d[1], (GLsizei)d[2], (GLsizei)d[3]);
+        glViewport(0, 0, canvas->GetWidth(), canvas->GetHeight());
         CHECK_FOR_GL_ERROR();
-
         // apply the volume
         ApplyViewingVolume(*volume);
     }
@@ -406,10 +402,10 @@ GLContext* GLRenderer::GetContext() {
 }
 
 void GLRenderer::BindUniforms(GLContext::GLShader& glshader) {
-    map<Uniform*, GLint>::iterator it = glshader.uniforms.begin();
+    vector<pair<Uniform*, GLint> >::iterator it = glshader.uniforms.begin();
     for (; it != glshader.uniforms.end(); ++it) {
-        GLint loc = it->second; 
         Uniform& uniform = *it->first;
+        GLint loc = it->second; 
         const Uniform::Data data = uniform.GetData();
         switch (uniform.GetKind()) {
         case Uniform::INT:
@@ -443,12 +439,11 @@ void GLRenderer::BindUniforms(GLContext::GLShader& glshader) {
     }
 }
 
-
 void GLRenderer::BindAttributes(GLContext::GLShader& glshader) {
-    map<IDataBlockPtr, GLint>::iterator it = glshader.attributes.begin();
+    vector<pair<Box<IDataBlockPtr>*, GLint> >::iterator it = glshader.attributes.begin();
     for (; it != glshader.attributes.end(); ++it) {
         GLint loc = it->second;
-        IDataBlock* db = it->first.get();
+        IDataBlock* db = it->first->Get().get();
         if (ctx->VBOSupport()) {
             glBindBuffer(GL_ARRAY_BUFFER, ctx->LookupVBO(db));
             glEnableVertexAttribArray(loc);
@@ -457,7 +452,7 @@ void GLRenderer::BindAttributes(GLContext::GLShader& glshader) {
         }
         else {
             glEnableVertexAttribArray(loc);
-            IDataBlock* db = it->first.get();
+            IDataBlock* db = it->first->Get().get();
             glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, db->GetVoidData());
         }
         CHECK_FOR_GL_ERROR();
@@ -465,35 +460,40 @@ void GLRenderer::BindAttributes(GLContext::GLShader& glshader) {
 }
 
 void GLRenderer::UnbindAttributes(GLContext::GLShader& glshader) {
-    map<IDataBlockPtr, GLint>::iterator it = glshader.attributes.begin();
-    for (; it != glshader.attributes.end(); ++it) {
-        glDisableVertexAttribArray(it->second);
+    // vector<pair<Box<IDataBlockPtr>*, GLint> >::iterator it = glshader.attributes.begin();
+    // for (; it != glshader.attributes.end(); ++it) {
+    //     logger.info << "disable attrib: " << it->second << logger.end;
+    //     glDisableVertexAttribArray(it->second);
+    //     CHECK_FOR_GL_ERROR();
+    // }
+    for (unsigned int i = 0; i < glshader.attributes.size(); ++i) {
+        glDisableVertexAttribArray(i);
         CHECK_FOR_GL_ERROR();
     }
 }
 
 void GLRenderer::BindTextures2D(GLContext::GLShader& glshader) {
-    map<ITexture2DPtr, GLint>::iterator tex_it = glshader.textures.begin();
+    vector<pair<Box<ITexture2DPtr>*, GLint> >::iterator tex_it = glshader.textures.begin();
     GLint texUnit = 0;
     for (; tex_it != glshader.textures.end(); ++tex_it) {
         GLint loc = tex_it->second;
         glActiveTexture(GL_TEXTURE0 + texUnit);
         CHECK_FOR_GL_ERROR();
-        glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(tex_it->first.get()));
+        glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(tex_it->first->Get().get()));
         CHECK_FOR_GL_ERROR();
         glUniform1i(loc, texUnit++);
         CHECK_FOR_GL_ERROR();
     }
 
-    map<ICubemapPtr, GLint>::iterator cube_it = glshader.cubemaps.begin();
+    vector<pair<Box<ICubemapPtr>*, GLint> >::iterator cube_it = glshader.cubemaps.begin();
     for (; cube_it != glshader.cubemaps.end(); ++cube_it) {
         GLint loc = cube_it->second;
         glActiveTexture(GL_TEXTURE0 + texUnit);
         CHECK_FOR_GL_ERROR();
-        glBindTexture(GL_TEXTURE_CUBE_MAP, ctx->LookupCubemap(cube_it->first.get()));
+        glBindTexture(GL_TEXTURE_CUBE_MAP, ctx->LookupCubemap(cube_it->first->Get().get()));
         CHECK_FOR_GL_ERROR();
         glUniform1i(loc, texUnit++);
-        CHECK_FOR_GL_ERROR();        
+        CHECK_FOR_GL_ERROR();
     }
 }
 

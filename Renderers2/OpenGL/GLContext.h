@@ -15,6 +15,7 @@
 #include <Resources2/Shader.h>
 #include <Meta/OpenGL.h>
 #include <Core/IListener.h>
+#include <Utils/Box.h>
 #include <map>
 #include <vector>
 
@@ -48,7 +49,9 @@ using Display2::ICanvas;
 using Display2::Canvas2D;
 using Display2::Canvas3D;
 using Core::IListener;
+using Utils::Box;
 using std::map;
+using std::pair;
 using std::vector;
 
 /**
@@ -70,13 +73,13 @@ public:
     // structure containing the uniform locations.
     struct GLShader {
         GLuint id;
-        map<Uniform*, GLint> uniforms;
-        map<IDataBlockPtr, GLint> attributes;
-        map<ITexture2DPtr, GLint> textures;
-        map<ICubemapPtr, GLint> cubemaps;
+        vector<pair<Uniform*, GLint> > uniforms;
+        vector<pair<Box<IDataBlockPtr>*, GLint> > attributes;
+        vector<pair<Box<ITexture2DPtr>*, GLint> > textures;
+        vector<pair<Box<ICubemapPtr>*, GLint> > cubemaps;
     };
     struct Attachments {
-        ITexture2DPtr color0, color1, depth0, depth1;
+        ITexture2DPtr color0, color1, depth;
     };
 
 private:

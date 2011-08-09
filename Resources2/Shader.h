@@ -16,6 +16,7 @@
 #include <Resources/ITexture2D.h>
 #include <Resources/ICubemap.h>
 #include <Core/Event.h>
+#include <Utils/Box.h>
 #include <string>
 #include <map>
 #include <boost/shared_ptr.hpp>
@@ -30,6 +31,7 @@ using Resources::ITexture2DPtr;
 using Resources::ICubemapPtr;
 using Core::IEvent;
 using Core::Event;
+using Utils::Box;
 using std::map;
 using std::string;
 
@@ -37,6 +39,7 @@ class Shader;
 typedef boost::shared_ptr<Shader> ShaderPtr;
 
 class Uniform {
+friend class Shader;
 public:
     enum Kind {
         UNKNOWN,
@@ -56,11 +59,20 @@ public:
         };
     };
 
+    // class ChangedEventArg {
+    // public:
+    //     ChangedEventArg(Shader* shader, Uniform& uniform): shader(shader), uniform(uniform) {}
+    //     virtual ~ChangedEventArg() {}
+    //     Shader* shader;
+    //     Uniform& uniform;
+    // };
+
 private:
+    Shader* shader;
     Kind kind;
     Data data;
+    Uniform(Shader* shader);
 public:
-    Uniform();
     virtual ~Uniform();
 
     void Set(int v);
@@ -86,11 +98,12 @@ public:
  * @class Shader Shader.h Resources2/Shader.h
  */
 class Shader {
+friend class Uniform;
 public:    
-    typedef map<string, Uniform>::iterator UniformIterator;
-    typedef map<string, IDataBlockPtr>::iterator AttributeIterator;
-    typedef map<string, ITexture2DPtr>::iterator Texture2DIterator;
-    typedef map<string, ICubemapPtr>::iterator CubemapIterator;
+    typedef map<string, Uniform*>::iterator UniformIterator;
+    // typedef map<string, Box<IDataBlockPtr>*>::iterator AttributeIterator;
+    // typedef map<string, Box<ITexture2DPtr>*>::iterator Texture2DIterator;
+    // typedef map<string, Box<ICubemapPtr>*>::iterator CubemapIterator;
     class ChangedEventArg {
     public:
         ChangedEventArg(Shader* shader): shader(shader) {}
@@ -98,13 +111,14 @@ public:
         Shader* shader;
     };
 private:
-    map<string, Uniform> uniforms;
-    map<string, IDataBlockPtr> attributes;
-    map<string, ITexture2DPtr> textures;
-    map<string, ICubemapPtr> cubemaps;
+    map<string, Uniform*> uniforms;
+    map<string, Box<IDataBlockPtr>*> attributes;
+    map<string, Box<ITexture2DPtr>*> textures;
+    map<string, Box<ICubemapPtr>*> cubemaps;
 protected:
     string vertexShader, fragmentShader;
     Event<ChangedEventArg> changedEvent;
+    // Event<Uniform::ChangedEventArg> uniformChangedEvent;
 public:
     Shader();
     Shader(string vertexShader, string fragmentShader);
@@ -112,31 +126,33 @@ public:
 
     Uniform& GetUniform(string name);
     
-    IDataBlockPtr GetAttribute(string name);
-    void SetAttribute(string name, IDataBlockPtr attr);
-    void UnsetAttribute(string name);
+    Box<IDataBlockPtr>& GetAttribute(string name);
 
-    ITexture2DPtr GetTexture2D(string name);
-    void SetTexture2D(string name, ITexture2DPtr tex);
-    void UnsetTexture2D(string name);
+    // void SetAttribute(string name, IDataBlockPtr attr);
+    // void UnsetAttribute(string name);
 
-    void SetCubemap(string name, ICubemapPtr tex);
-    void UnsetCubemap(string name);
+    Box<ITexture2DPtr>& GetTexture2D(string name);
+    // void SetTexture2D(string name, ITexture2DPtr tex);
+    // void UnsetTexture2D(string name);
+
+    Box<ICubemapPtr>& GetCubemap(string name);
+    // void SetCubemap(string name, ICubemapPtr tex);
+    // void UnsetCubemap(string name);
 
     virtual string GetVertexShader(); 
     virtual string GetFragmentShader();
 
-    UniformIterator UniformsBegin();
-    UniformIterator UniformsEnd();
+    // UniformIterator UniformsBegin();
+    // UniformIterator UniformsEnd();
 
-    AttributeIterator AttributesBegin();
-    AttributeIterator AttributesEnd();
+    // AttributeIterator AttributesBegin();
+    // AttributeIterator AttributesEnd();
 
-    Texture2DIterator Textures2DBegin();
-    Texture2DIterator Textures2DEnd();
+    // Texture2DIterator Textures2DBegin();
+    // Texture2DIterator Textures2DEnd();
 
-    CubemapIterator CubemapsBegin();
-    CubemapIterator CubemapsEnd();
+    // CubemapIterator CubemapsBegin();
+    // CubemapIterator CubemapsEnd();
 
     IEvent<ChangedEventArg>& ChangedEvent() { return changedEvent; }
 };

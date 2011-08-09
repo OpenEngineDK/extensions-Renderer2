@@ -12,6 +12,7 @@
 #include <Renderers2/OpenGL/GLContext.h>
 #include <Resources/DirectoryManager.h>
 #include <Resources/File.h>
+#include <Resources/DataBlock.h>
 #include <Display2/Canvas3D.h>
 #include <Logging/Logger.h>
 
@@ -23,23 +24,13 @@ using Resources::File;
 using Resources::DirectoryManager;
 
 using namespace Renderers2::OpenGL;
+using namespace Resources;
 
 FXAAShader::FXAAShader()
     : active(true)
+    , rcpFrame(GetUniform("rcpFrame"))
+    , texA(GetTexture2D("texA"))
 {
-    vertices[0] = -1.0;
-    vertices[1] = 1.0;
-
-    vertices[2] = -1.0;
-    vertices[3] = -1.0;
-
-    vertices[6] = 1.0;
-    vertices[7] = 1.0;
-
-    vertices[4] = 1.0;
-    vertices[5] = -1.0;
-
-
     const string shaderFile = DirectoryManager::FindFileInPath("extensions/Renderer2/shaders/TinyFxaa.glsl");
 
     int sz = File::GetSize(shaderFile);
@@ -64,56 +55,55 @@ FXAAShader::~FXAAShader() {
 }
 
 void FXAAShader::Handle(RenderingEventArg arg) {
+    if (arg.renderer.GetCurrentStage() == GLRenderer::RENDERER_INITIALIZE) {
+        const float verts[4*2] = {
+            -1.0f, 1.0f,
+            -1.0f, -1.0f,
+            1.0f, 1.0f,
+            1.0f, -1.0f
+        };
+        DataBlock<2,float>* db = new DataBlock<2,float>(4);
+        memcpy(db->GetVoidDataPtr(), verts, 4 * 2 * sizeof(float));
+        GetAttribute("inA").Set(IDataBlockPtr(db));        
+        return;
+    }
     if (!active) return;
+    
 
     // this is a hack! Module should not be added in the first place if shader is not supported.
     if (!arg.renderer.GetContext()->ShaderSupport()) return; 
 
     GLContext* ctx = arg.renderer.GetContext();
 
-    GLuint shaderId = ctx->LookupShader(this).id;
-    GLuint screenId = ctx->LookupTexture(ctx->LookupCanvas(arg.canvas).color0.get());
-
-    // copy backbuffer to screen tex
-    glActiveTexture(GL_TEXTURE0);
-    CHECK_FOR_GL_ERROR();
-    glBindTexture(GL_TEXTURE_2D, screenId);
-    CHECK_FOR_GL_ERROR();
-    // glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, arg.canvas->GetWidth(), arg.canvas->GetHeight(), 0);
-    // CHECK_FOR_GL_ERROR();
+    GLContext::Attachments& atts = ctx->LookupCanvas(arg.canvas);
+    texA.Set(atts.color0);
+    rcpFrame.Set(Vector<2,float>(1.0f / arg.canvas->GetWidth(), 1.0f / arg.canvas->GetHeight()));    
+    
+    GLint prevFbo; 
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
+    GLint fbo = ctx->LookupFBO(arg.canvas);
+    
+    if (prevFbo == fbo) {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 
+                               ctx->LookupTexture(atts.color1.get()), 0);
+        //flip output buffers.
+        ITexture2DPtr tmp = atts.color0;
+        atts.color0 = atts.color1;
+        atts.color1 = tmp;
+    }
 
     glDisable(GL_DEPTH_TEST);
-        
-    glUseProgram(shaderId);
-    GLint loc = glGetUniformLocation(shaderId, "rcpFrame");
-#if OE_SAFE
-    if (loc == -1) throw Exception(string("Uniform location not found: rcpFrame"));
-#endif
-    glUniform2f(loc, 1.0f / arg.canvas->GetWidth(), 1.0f / arg.canvas->GetHeight());    
-
-    loc = glGetUniformLocation(shaderId, "texA");
-#if OE_SAFE
-    if (loc == -1) throw Exception(string("Uniform location not found: texA"));
-#endif
-    glUniform1i(loc, 0);
-    CHECK_FOR_GL_ERROR();
+    glDepthMask(GL_FALSE);
     
     //draw quad
-    loc = glGetAttribLocation(shaderId, "inA");
-#if OE_SAFE
-    if (loc == -1) throw Exception(string("Attribute location not found: inA"));
-#endif
-    glEnableVertexAttribArray(loc);
-    glVertexAttribPointer(loc, 2, GL_FLOAT, GL_FALSE, 0, vertices);
-    CHECK_FOR_GL_ERROR();
-
+    arg.renderer.Apply(this);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     CHECK_FOR_GL_ERROR();
+    arg.renderer.Release(this);
 
-    glDisableVertexAttribArray(loc);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glUseProgram(0);
+    glDepthMask(GL_TRUE);
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
 }
 
 void FXAAShader::SetActive(bool active) {

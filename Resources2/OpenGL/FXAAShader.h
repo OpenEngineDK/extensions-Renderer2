@@ -15,6 +15,7 @@
 
 namespace OpenEngine {
 namespace Resources2 {
+    class Uniform;
 namespace OpenGL {
 
 using Core::IListener;
@@ -22,8 +23,9 @@ using Renderers2::OpenGL::RenderingEventArg;
 
 class FXAAShader: public Shader, public IListener<RenderingEventArg> {
 private:
-    float vertices[4*2]; // 4 2-vectors
     bool active;
+    Uniform &rcpFrame;
+    Box<ITexture2DPtr>& texA;
 public:
     FXAAShader();
     virtual ~FXAAShader();

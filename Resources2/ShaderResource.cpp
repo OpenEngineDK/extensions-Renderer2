@@ -199,7 +199,7 @@ void ShaderResource::Load() {
 
                 if (type == "text:" || type == "tex2D") {
                     ITexture2DPtr t = ResourceManager<ITexture2D>::Create(texfile);
-                    SetTexture2D(texname, t);
+                    GetTexture2D(texname).Set(t);
                 } else if (type == "tex3D:"){
                     throw Exception("tex3D not supported, yet ...");
                 }
