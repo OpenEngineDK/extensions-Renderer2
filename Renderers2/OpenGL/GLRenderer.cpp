@@ -1,5 +1,5 @@
 // OpenGL renderer implementation.
-// -------------------------------------------------------------------
+ // -------------------------------------------------------------------
 // Copyright (C) 2007 OpenEngine.dk (See AUTHORS) 
 // 
 // This program is free software; It is covered by the GNU General 
@@ -50,7 +50,6 @@ GLRenderer::GLRenderer(GLContext* ctx)
     DirectoryManager::AppendPath("extensions/Renderer2/");
     quadShader = ResourceManager<ShaderResource>::Create("shaders/QuadShader.glsl");
     quadShader->Load();
-    
     preProcess.Attach(*lv);
     process.Attach(*rv);
 }
@@ -66,11 +65,14 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
     --level;
 
     GLint prevFbo;
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
 
     if (ctx->FBOSupport() && level > 0) {
+        // logger.info << "hip!" << logger.end;
+
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
         glBindFramebuffer(GL_FRAMEBUFFER, ctx->LookupFBO(canvas));
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ctx->LookupCanvas(canvas), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 
+                               ctx->LookupTexture(ctx->LookupCanvas(canvas).color0.get()), 0);
         CHECK_FRAMEBUFFER_STATUS();
    }
 
@@ -136,7 +138,7 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
             glUniform4fv(clLoc, 1, col);
             CHECK_FOR_GL_ERROR();
 
-            glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(it->canvas));
+            glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(ctx->LookupCanvas(it->canvas).color0.get()));
             glUniform1i(txLoc, 0);
             CHECK_FOR_GL_ERROR();
 
@@ -208,18 +210,19 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
     }
 #endif
 
-    if (ctx->FBOSupport() && level > 0) {
-        //bind the previous back buffer again
-        glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
+    if (ctx->FBOSupport()) {
+        if (level > 0) {
+            //bind the previous back buffer again
+            glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
+        }
     }
     else {
-        glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(canvas));
+        glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(ctx->LookupCanvas(canvas).color0.get()));
         CHECK_FOR_GL_ERROR();
         glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
                          0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
         CHECK_FOR_GL_ERROR();
     }
-
     glBindTexture(GL_TEXTURE_2D, 0);
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
@@ -229,10 +232,15 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
 
 void GLRenderer::Render(Canvas3D* canvas) {
     GLint prevFbo;
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
 
     if (ctx->FBOSupport() && level > 0) {
+        // logger.info << "hey!" << logger.end;
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
         glBindFramebuffer(GL_FRAMEBUFFER, ctx->LookupFBO(canvas));
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 
+                               ctx->LookupTexture(ctx->LookupCanvas(canvas).color0.get()), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, 
+                               ctx->LookupTexture(ctx->LookupCanvas(canvas).depth0.get()), 0);
     }
 
     // logger.info << "render c3d: " << canvas << logger.end;
@@ -273,13 +281,15 @@ void GLRenderer::Render(Canvas3D* canvas) {
     this->postProcess.Notify(rarg);
     this->stage = RENDERER_PREPROCESS;
 
-    if (ctx->FBOSupport() && level > 0) {
-        //bind the previous back buffer again
-        glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
+    if (ctx->FBOSupport()) {
+        if (level > 0) {
+            //bind the previous back buffer again
+            glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
+        }
     }
     else {
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas((ICanvas*)canvas));
+        glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(ctx->LookupCanvas(canvas).color0.get()));
         CHECK_FOR_GL_ERROR();
         glCopyTexImage2D(GL_TEXTURE_2D, 0, GLContext::GLInternalColorFormat(canvas->GetColorFormat()), 
                          0, 0, canvas->GetWidth(), canvas->GetHeight(), 0);
@@ -323,9 +333,9 @@ void GLRenderer::Handle(Core::DeinitializeEventArg arg) {
 }
     
 void GLRenderer::Handle(Core::ProcessEventArg arg) {
+    // logger.info << "hep!" << logger.end;
     this->arg = arg;
     canvas->Accept(*cv);
-
 }
 
 IEvent<RenderingEventArg>& GLRenderer::InitializeEvent() {
@@ -394,9 +404,6 @@ void GLRenderer::ApplyViewingVolume(IViewingVolume& volume) {
 GLContext* GLRenderer::GetContext() {
     return ctx;
 }
-
-
-
 
 void GLRenderer::BindUniforms(GLContext::GLShader& glshader) {
     map<Uniform*, GLint>::iterator it = glshader.uniforms.begin();
@@ -487,7 +494,7 @@ void GLRenderer::BindTextures2D(GLContext::GLShader& glshader) {
         CHECK_FOR_GL_ERROR();
         glUniform1i(loc, texUnit++);
         CHECK_FOR_GL_ERROR();        
-    }    
+    }
 }
 
 void GLRenderer::UnbindTextures2D(GLContext::GLShader& glshader) {
@@ -506,7 +513,6 @@ void GLRenderer::UnbindTextures2D(GLContext::GLShader& glshader) {
     }
 }
 
-
 GLuint GLRenderer::Apply(Shader* shader) {
     GLContext::GLShader glshader = ctx->LookupShader(shader);
     glUseProgram(glshader.id);
@@ -522,21 +528,6 @@ void GLRenderer::Release(Shader* shader) {
     UnbindTextures2D(glshader);        
     glUseProgram(0);
 }
-
-
-// void GLRenderer::Render(Shader* shader, Canvas3D* canvas) {
-//     GLint prevFBO;
-
-//     if (canvas && ctx->FBOSupport()) {
-//         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFBO);
-//         glBindFramebuffer(GL_FRAMEBUFFER, ctx->LookupFBO(canvas));
-//     }
-
-
-//     if (canvas && ctx->FBOSupport()) {
-//         glBindFramebuffer(GL_FRAMEBUFFER, prevFBO);
-//     }
-// } 
 
 } // NS OpenGL
 } // NS Renderers

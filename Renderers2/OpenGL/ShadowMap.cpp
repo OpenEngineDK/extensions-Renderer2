@@ -44,9 +44,7 @@ void ShadowMap::DepthRenderer::Initialize(GLContext* ctx, Shader* shader) {
         throw Exception("Shadowmap does not work without FBOSupport.");
     }
     GLContext::Attachments atts = ctx->LookupCanvas(canvas);
-    ctx->LookupFBO(canvas);
-
-    shader->SetTexture2D("shadow", atts.depth);
+    shader->SetTexture2D("shadow", atts.depth0);
 }
 
 void ShadowMap::DepthRenderer::Render(ISceneNode* scene, IViewingVolume& cam, GLContext* ctx) {
@@ -57,8 +55,12 @@ void ShadowMap::DepthRenderer::Render(ISceneNode* scene, IViewingVolume& cam, GL
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
 
     GLuint fbo = ctx->LookupFBO(canvas);
+
     // Setup the new frame buffer
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, 
+                           ctx->LookupTexture(ctx->LookupCanvas(canvas).depth0.get()), 0);
+
     glClear(GL_DEPTH_BUFFER_BIT);
     glViewport(0, 0, width, height);
     CHECK_FOR_GL_ERROR();
@@ -70,8 +72,6 @@ void ShadowMap::DepthRenderer::Render(ISceneNode* scene, IViewingVolume& cam, GL
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_POLYGON_OFFSET_FILL);
     //glPolygonOffset(2.1, 4.0);
-
-
 
     // Select The Projection Matrix
     glMatrixMode(GL_PROJECTION);
@@ -102,8 +102,6 @@ void ShadowMap::DepthRenderer::Render(ISceneNode* scene, IViewingVolume& cam, GL
     matrix.ToArray(f);
     glMultMatrixf(f);
     CHECK_FOR_GL_ERROR();
-
-
 
     // Draw it
     scene->Accept(*this);
@@ -167,8 +165,6 @@ void ShadowMap::DepthRenderer::VisitMeshNode(MeshNode* node) {
         glDrawElements(type, count, GL_UNSIGNED_INT, indexBuffer->GetData() + offset);
     }
 
-
-
     node->VisitSubNodes(*this);
     CHECK_FOR_GL_ERROR();
 }
@@ -176,6 +172,8 @@ void ShadowMap::DepthRenderer::VisitMeshNode(MeshNode* node) {
 ShadowMap::ShadowMap(unsigned int width, unsigned int height)
   : depthRenderer(width, height)
   , shader(ResourceManager<ShaderResource>::Create("shaders/shadowmap.glsl"))
+  , lightMatrix(shader->GetUniform("lightMat"))
+  , viewProjectionInverse(shader->GetUniform("viewProjectionInverse"))
 {
     shader->Load();
 }
@@ -188,6 +186,15 @@ void ShadowMap::Handle(RenderingEventArg arg) {
     if (arg.renderer.GetCurrentStage() == GLRenderer::RENDERER_INITIALIZE) {
         depthRenderer.Initialize(arg.renderer.GetContext(), shader.get());
         
+        const float verts[8] = {
+            -1.0f, 1.0f,
+            -1.0f, -1.0f,
+            1.0f, 1.0f,
+            1.0f, -1.0f
+        };
+        DataBlock<2,float>* db = new DataBlock<2,float>(4);
+        memcpy(db->GetVoidDataPtr(), verts, 4 * 2 * sizeof(float));
+        shader->SetAttribute("vertex", IDataBlockPtr(db));        
     }
     else if (arg.renderer.GetCurrentStage() == GLRenderer::RENDERER_PREPROCESS) {
         depthRenderer.Render(arg.canvas->GetScene(), *viewingVolume, arg.renderer.GetContext());
@@ -197,45 +204,59 @@ void ShadowMap::Handle(RenderingEventArg arg) {
                                      .0, .0, .5,  .0,
                                      .5, .5, .5, 1.0);
 
-        shader->GetUniform("lightMat").Set(viewingVolume->GetViewMatrix() *
-                                           viewingVolume->GetProjectionMatrix() * 
-                                           bias);
+        lightMatrix.Set(viewingVolume->GetViewMatrix() *
+                        viewingVolume->GetProjectionMatrix() * 
+                        bias);
 
-        shader->GetUniform("viewProjectionInverse").Set((arg.canvas->GetViewingVolume()->GetViewMatrix() * 
-                                                         arg.canvas->GetViewingVolume()->GetProjectionMatrix()).GetInverse());
+        viewProjectionInverse.Set((arg.canvas->GetViewingVolume()->GetViewMatrix() * 
+                                   arg.canvas->GetViewingVolume()->GetProjectionMatrix()).GetInverse());
+
     }
-    else {
-        GLContext::Attachments atts = arg.renderer.GetContext()->LookupCanvas(arg.canvas);
+    else {           
+        GLContext::Attachments& atts = arg.renderer.GetContext()->LookupCanvas(arg.canvas);
         shader->SetTexture2D("color0", atts.color0);
-        shader->SetTexture2D("depth", atts.depth);
-
-            
-        const float verts[8] = {
-            -1.0f, 1.0f,
-            -1.0f, -1.0f,
-            1.0f, 1.0f,
-            1.0f, -1.0f
-        };
-
+        shader->SetTexture2D("depth", atts.depth0); 
         
+        GLint prevFbo; 
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
+        GLContext* ctx = arg.renderer.GetContext();
+        GLint fbo = ctx->LookupFBO(arg.canvas);
+        
+        if (prevFbo == fbo) {
+            // logger.info << "BLAM: " << fbo << logger.end;
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 
+                                   ctx->LookupTexture(atts.color1.get()), 0);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, 
+                                   ctx->LookupTexture(atts.depth1.get()), 0);
+        
+            // flip output buffers.
+            ITexture2DPtr tmp = atts.color0;
+            atts.color0 = atts.color1;
+            atts.color1 = tmp;
+
+            tmp = atts.depth0;
+            atts.depth0 = atts.depth1;
+            atts.depth1 = tmp;
+        
+        }
         glDisable(GL_DEPTH_TEST);
         // do the quading with the post process shader
-        GLuint shaderId = arg.renderer.Apply(shader.get());
+        //GLuint shaderId = 
+        arg.renderer.Apply(shader.get());
         CHECK_FOR_GL_ERROR();
 
-        const GLint vsLoc = glGetAttribLocation(shaderId, "vertex");
-        glEnableVertexAttribArray(vsLoc);
-        glVertexAttribPointer(vsLoc, 2, GL_FLOAT, GL_FALSE, 0, verts);
-        CHECK_FOR_GL_ERROR();
+        // const GLint vsLoc = glGetAttribLocation(shaderId, "vertex");
+        // glEnableVertexAttribArray(vsLoc);
+        // glVertexAttribPointer(vsLoc, 2, GL_FLOAT, GL_FALSE, 0, verts);
+        // CHECK_FOR_GL_ERROR();
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         CHECK_FOR_GL_ERROR();
         arg.renderer.Release(shader.get());        
-        glDisableVertexAttribArray(vsLoc);
-
+        CHECK_FOR_GL_ERROR();
+        // glDisableVertexAttribArray(vsLoc);
         glEnable(GL_DEPTH_TEST);
     } 
 }
-
 
 
 }

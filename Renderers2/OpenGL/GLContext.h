@@ -76,15 +76,15 @@ public:
         map<ICubemapPtr, GLint> cubemaps;
     };
     struct Attachments {
-        ITexture2DPtr color0, depth;
+        ITexture2DPtr color0, color1, depth0, depth1;
     };
 
 private:
     GLSLVersion glslversion;
     bool init, fboSupport, vboSupport, shaderSupport;
-    map<Canvas3D*, Attachments> attachments; // color attachments and depth attachment
+    map<ICanvas*, Attachments> attachments; // color attachments and depth attachment
     map<ICanvas*, GLuint> fbos;              // association with fbo
-    map<ICanvas*, GLuint> canvases;          // other canvases need only a single color attachment
+    // map<ICanvas*, GLuint> canvases;          // other canvases need only a single color attachment
     map<ITexture2D*, GLuint> textures;
     map<IDataBlock*, GLuint> vbos;
     map<ICubemap*, GLuint> cubemaps;
@@ -93,8 +93,8 @@ private:
     // GLuint LoadCanvas(ICanvas* can);
 
     // GPU creation routines
-    Attachments LoadCanvas(Canvas3D* can, GLuint color0);
-    GLuint LoadCanvas(ICanvas* can);
+    //Attachments LoadCanvas(Canvas3D* can, GLuint color0);
+    Attachments LoadCanvas(ICanvas* can);
     GLuint LoadTexture(ITexture2D* tex);
     GLuint LoadVBO(IDataBlock* db);
     GLuint LoadShader(Shader* shad);
@@ -114,10 +114,10 @@ public:
     // lookup routines. If no map contains the requested object the
     // creation routines will be invoked.
     GLuint LookupFBO(ICanvas* can);
-    GLuint LookupFBO(Canvas3D* can);
-    GLuint LookupCanvas(ICanvas* can);
-    GLuint LookupCanvas(Canvas2D* can);
-    Attachments LookupCanvas(Canvas3D* can);
+    //GLuint LookupFBO(Canvas3D* can);
+    //GLuint LookupCanvas(ICanvas* can);
+    Attachments& LookupCanvas(Canvas2D* can);
+    Attachments& LookupCanvas(ICanvas* can);
     GLuint LookupTexture(ITexture2D* tex);
     GLuint LookupVBO(IDataBlock* db);
     GLShader LookupShader(Shader* shad);

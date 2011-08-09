@@ -58,6 +58,13 @@ public:
         return bgc;
     }
 
+    inline void SetSkybox(const Resources::ICubemapPtr skybox) { 
+        left->SetSkybox(skybox);
+        right->SetSkybox(skybox);
+    }
+
+    inline Resources::ICubemapPtr GetSkybox() const { return left->GetSkybox(); }
+
 };
 
 } // NS Display

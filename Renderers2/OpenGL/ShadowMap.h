@@ -32,6 +32,7 @@ namespace OpenEngine {
     }
     namespace Resources2 {
         class ShaderResource;
+        class Uniform;
         typedef boost::shared_ptr<ShaderResource> ShaderResourcePtr;
     }
 
@@ -48,6 +49,7 @@ using Math::Matrix;
 using Display::IViewingVolume;
 using Display2::Canvas3D;
 using Resources2::ShaderResourcePtr;
+using Resources2::Uniform;
 
 /**
  * Shadow Map effect. 
@@ -74,6 +76,8 @@ private:
     DepthRenderer depthRenderer;
     Display::IViewingVolume* viewingVolume;
     ShaderResourcePtr shader;
+    Uniform &lightMatrix, &viewProjectionInverse;
+    
 public:
     ShadowMap(unsigned int width, unsigned int height); 
     void Handle(RenderingEventArg arg);

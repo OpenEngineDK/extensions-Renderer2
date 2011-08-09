@@ -232,146 +232,141 @@ GLuint GLContext::LookupFBO(ICanvas* can) {
     map<ICanvas*, GLuint>::iterator it = fbos.find(can);
     if (it != fbos.end())
         return it->second;
-    GLuint fbo;
-    glGenFramebuffers(1, &fbo);
-    fbos[can] = fbo;
-    return fbo;
-}
-
-GLuint GLContext::LookupFBO(Canvas3D* can) {
-    map<ICanvas*, GLuint>::iterator it = fbos.find(can);
-    if (it != fbos.end())
-        return it->second;
     
     // if we create a new fbo then attach the canvas3D attachments.
-    GLContext::Attachments atts = LookupCanvas(can);
+    // GLContext::Attachments atts = LookupCanvas(can);
     GLuint fbo;
     glGenFramebuffers(1, &fbo);
 
-    GLint prevFbo;
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
+    // GLint prevFbo;
+    // glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
     // create the framebuffer
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, LookupTexture(atts.color0.get()), 0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, LookupTexture(atts.depth.get()), 0);
-    CHECK_FRAMEBUFFER_STATUS();
+    // glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, LookupTexture(atts.color0.get()), 0);
+    // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, LookupTexture(atts.depth.get()), 0);
+    // CHECK_FRAMEBUFFER_STATUS();
     //bind the main back buffer again
-    glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
+    // glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
 
     fbos[can] = fbo;
     return fbo;
 }
 
-GLuint GLContext::LoadCanvas(ICanvas* can) {
+// GLuint GLContext::LoadCanvas(ICanvas* can) {
+// #if OE_SAFE
+//     if (can == NULL) throw Exception("Cannot load NULL canvas.");
+// #endif
+//     GLuint texid;
+//     glGenTextures(1, &texid);
+//     CHECK_FOR_GL_ERROR();
+
+//     glBindTexture(GL_TEXTURE_2D, texid);
+//     CHECK_FOR_GL_ERROR();
+
+//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+//         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+//     GLint internalFormat = GLInternalColorFormat(can->GetColorFormat());
+//     GLenum format = GLColorFormat(can->GetColorFormat());
+
+//     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat,
+//                  can->GetWidth(), can->GetHeight(), 0, format, 
+//                  GL_UNSIGNED_BYTE, NULL);
+//     CHECK_FOR_GL_ERROR();
+
+//     glBindTexture(GL_TEXTURE_2D, 0);
+
+//     return texid;
+// }
+
+
+
+GLContext::Attachments GLContext::LoadCanvas(ICanvas* can) {
 #if OE_SAFE
     if (can == NULL) throw Exception("Cannot load NULL canvas.");
 #endif
-    GLuint texid;
-    glGenTextures(1, &texid);
-    CHECK_FOR_GL_ERROR();
-
-    glBindTexture(GL_TEXTURE_2D, texid);
-    CHECK_FOR_GL_ERROR();
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    GLint internalFormat = GLInternalColorFormat(can->GetColorFormat());
-    GLenum format = GLColorFormat(can->GetColorFormat());
-
-    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat,
-                 can->GetWidth(), can->GetHeight(), 0, format, 
-                 GL_UNSIGNED_BYTE, NULL);
-    CHECK_FOR_GL_ERROR();
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    return texid;
-}
-
-
-
-GLContext::Attachments GLContext::LoadCanvas(Canvas3D* can, GLuint color0) {
-#if OE_SAFE
-    if (can == NULL) throw Exception("Cannot load NULL canvas.");
-#endif
-    GLint internalFormat = GLInternalColorFormat(can->GetColorFormat());
-    GLenum format = GLColorFormat(can->GetColorFormat());
+    // GLint internalFormat = GLInternalColorFormat(can->GetColorFormat());
+    // GLenum format = GLColorFormat(can->GetColorFormat());
 
     GLContext::Attachments atts;
 
-    atts.color0 = ITexture2DPtr(new Texture2D<unsigned char>());
-    atts.depth = ITexture2DPtr(new Texture2D<float>());
+    atts.color0 = ITexture2DPtr(new Texture2D<unsigned char>(can->GetWidth(), can->GetHeight(), can->GetColorFormat(), 3));
+    atts.color1 = ITexture2DPtr(new Texture2D<unsigned char>(can->GetWidth(), can->GetHeight(), can->GetColorFormat(), 3));
+    atts.depth0 = ITexture2DPtr(new Texture2D<float>(can->GetWidth(), can->GetHeight(), DEPTH, 1));
+    atts.depth1 = ITexture2DPtr(new Texture2D<float>(can->GetWidth(), can->GetHeight(), DEPTH, 1));
 
-    if (!color0) {
-        glGenTextures(1, &color0);
-        CHECK_FOR_GL_ERROR();
-        glBindTexture(GL_TEXTURE_2D, color0);
+    // if (!color0) {
+    //     glGenTextures(1, &color0);
+    //     CHECK_FOR_GL_ERROR();
+    //     glBindTexture(GL_TEXTURE_2D, color0);
         
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        CHECK_FOR_GL_ERROR();
+    //     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    //     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    //     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    //     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    //     CHECK_FOR_GL_ERROR();
         
-        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat,
-                     can->GetWidth(), can->GetHeight(), 0, format, 
-                     GL_UNSIGNED_BYTE, NULL);
-        CHECK_FOR_GL_ERROR();
-    }
-    textures[atts.color0.get()] = color0;
+    //     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat,
+    //                  can->GetWidth(), can->GetHeight(), 0, format, 
+    //                  GL_UNSIGNED_BYTE, NULL);
+    //     CHECK_FOR_GL_ERROR();
+    // }
+    // textures[atts.color0.get()] = color0;
     
-    // depth
-    GLuint depth;
-    glGenTextures(1, &depth);
-    CHECK_FOR_GL_ERROR();
-    glBindTexture(GL_TEXTURE_2D, depth);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    CHECK_FOR_GL_ERROR();
+    // // depth
+    // GLuint depth;
+    // glGenTextures(1, &depth);
+    // CHECK_FOR_GL_ERROR();
+    // glBindTexture(GL_TEXTURE_2D, depth);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // CHECK_FOR_GL_ERROR();
     
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-                 can->GetWidth(), can->GetHeight(), 0, GL_DEPTH_COMPONENT, 
-                 GL_FLOAT, NULL);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    textures[atts.depth.get()] = depth;
+    // glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+    //              can->GetWidth(), can->GetHeight(), 0, GL_DEPTH_COMPONENT, 
+    //              GL_FLOAT, NULL);
+    // glBindTexture(GL_TEXTURE_2D, 0);
+    // textures[atts.depth.get()] = depth;
     return atts;
 }
 
 
-GLuint GLContext::LookupCanvas(ICanvas* can) {
-    map<ICanvas*, GLuint>::iterator it = canvases.find(can);
-    if (it != canvases.end())
-        return it->second;
-    GLuint id = LoadCanvas(can);
-    canvases[can] = id;
-    return id;
+// GLuint GLContext::LookupCanvas(ICanvas* can) {
+//     map<ICanvas*, GLuint>::iterator it = canvases.find(can);
+//     if (it != canvases.end())
+//         return it->second;
+//     GLuint id = LoadCanvas(can);
+//     canvases[can] = id;
+//     return id;
+// }
+
+GLContext::Attachments& GLContext::LookupCanvas(Canvas2D* can) {
+    GLContext::Attachments& atts = LookupCanvas((ICanvas*)can);
+    atts.color0 = can->GetTexture();
+    // GLuint id = LookupTexture(can->GetTexture().get());
+    //attachments[can] = atts;
+    // canvases[can] = id;
+    return atts;
 }
 
-GLuint GLContext::LookupCanvas(Canvas2D* can) {
-    GLuint id = LookupTexture(can->GetTexture().get());
-    canvases[can] = id;
-    return id;
-}
-
-GLContext::Attachments GLContext::LookupCanvas(Canvas3D* can) {
-    map<Canvas3D*, Attachments>::iterator it = attachments.find(can);
+GLContext::Attachments& GLContext::LookupCanvas(ICanvas* can) {
+    map<ICanvas*, Attachments>::iterator it = attachments.find(can);
     if (it != attachments.end())
         return it->second;
     
     // does the canvas already have a single color texture associated?
-    GLuint color0 = 0;
-    map<ICanvas*, GLuint>::iterator it2 = canvases.find(can);
-    if (it2 != canvases.end())
-        color0 = it2->second;
-    GLContext::Attachments atts = LoadCanvas(can, color0);
-    canvases[can] = LookupTexture(atts.color0.get());
+    // GLuint color0 = 0;
+    // map<ICanvas*, GLuint>::iterator it2 = canvases.find(can);
+    // if (it2 != canvases.end())
+    //     color0 = it2->second;
+    GLContext::Attachments atts = LoadCanvas(can);
+    // canvases[can] = LookupTexture(atts.color0.get());
     attachments[can] = atts;
     
-    return atts;
+    return attachments[can];
 }
 
 
@@ -725,10 +720,10 @@ void GLContext::ReleaseTextures() {
          it->first->ChangedEvent().Detach(*this);
      }
 
-     map<ICanvas*, GLuint>::iterator it2 = canvases.begin();
-     for (; it2 != canvases.end(); ++it2) {
-         glDeleteTextures(1, &it2->second);
-     }
+     // map<ICanvas*, GLuint>::iterator it2 = canvases.begin();
+     // for (; it2 != canvases.end(); ++it2) {
+     //     glDeleteTextures(1, &it2->second);
+     // }
 
      // map<Canvas3D*, Attachments>::iterator it3 = attachments.begin();
      // for (; it3 != attachments.end(); ++it3) {
@@ -747,8 +742,8 @@ void GLContext::ReleaseTextures() {
      }
 
      textures.clear();
-     canvases.clear();
-     attachments.clear();
+     // canvases.clear();
+     // attachments.clear();
      cubemaps.clear();
      fbos.clear();
 }
