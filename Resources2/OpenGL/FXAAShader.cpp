@@ -69,9 +69,10 @@ void FXAAShader::Handle(RenderingEventArg arg) {
     // this is a hack! Module should not be added in the first place if shader is not supported.
     if (!arg.renderer.GetContext()->ShaderSupport()) return; 
 
+    GLContext* ctx = arg.renderer.GetContext();
 
-    GLuint shaderId = arg.renderer.GetContext()->LookupShader(this).id;
-    GLuint screenId = arg.renderer.GetContext()->LookupCanvas(arg.canvas).color0;
+    GLuint shaderId = ctx->LookupShader(this).id;
+    GLuint screenId = ctx->LookupTexture(ctx->LookupCanvas(arg.canvas).color0.get());
 
     // copy backbuffer to screen tex
     glActiveTexture(GL_TEXTURE0);
