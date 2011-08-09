@@ -198,7 +198,7 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
             col[3] = col[7] = col[11] = col[15] =  it->opacity;
             glColorPointer(4, GL_FLOAT, 0, col);
 
-            glBindTexture(GL_TEXTURE_2D, ctx->LookupCanvas(it->canvas));
+            glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(ctx->LookupCanvas(it->canvas).color0.get()));
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             CHECK_FOR_GL_ERROR();
         }
