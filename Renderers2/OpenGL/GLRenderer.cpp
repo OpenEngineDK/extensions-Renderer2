@@ -473,26 +473,17 @@ void GLRenderer::UnbindAttributes(GLContext::GLShader& glshader) {
 }
 
 void GLRenderer::BindTextures2D(GLContext::GLShader& glshader) {
-    vector<pair<Box<ITexture2DPtr>*, GLint> >::iterator tex_it = glshader.textures.begin();
-    GLint texUnit = 0;
-    for (; tex_it != glshader.textures.end(); ++tex_it) {
-        GLint loc = tex_it->second;
+    // vector<pair<Box<ITexture2DPtr>*, GLint> >::iterator tex_it = glshader.textures.begin();
+    GLuint texUnit = 0;
+    for (; texUnit < glshader.textures.size(); ++texUnit) {
         glActiveTexture(GL_TEXTURE0 + texUnit);
-        CHECK_FOR_GL_ERROR();
-        glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(tex_it->first->Get().get()));
-        CHECK_FOR_GL_ERROR();
-        glUniform1i(loc, texUnit++);
+        glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(glshader.textures[texUnit].first->Get().get()));
         CHECK_FOR_GL_ERROR();
     }
-
-    vector<pair<Box<ICubemapPtr>*, GLint> >::iterator cube_it = glshader.cubemaps.begin();
-    for (; cube_it != glshader.cubemaps.end(); ++cube_it) {
-        GLint loc = cube_it->second;
+    for (unsigned int i = 0; i < glshader.cubemaps.size(); ++i) {
+        ++texUnit;
         glActiveTexture(GL_TEXTURE0 + texUnit);
-        CHECK_FOR_GL_ERROR();
-        glBindTexture(GL_TEXTURE_CUBE_MAP, ctx->LookupCubemap(cube_it->first->Get().get()));
-        CHECK_FOR_GL_ERROR();
-        glUniform1i(loc, texUnit++);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, ctx->LookupCubemap(glshader.cubemaps[i].first->Get().get()));
         CHECK_FOR_GL_ERROR();
     }
 }
