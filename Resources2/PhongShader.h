@@ -12,6 +12,7 @@
 
 #include <Resources2/ShaderResource.h>
 #include <Renderers2/OpenGL/LightVisitor.h>
+#include <Geometry/Material.h>
 
 namespace OpenEngine {
     namespace Geometry {
@@ -20,13 +21,18 @@ namespace OpenEngine {
 namespace Resources2 {
 
 using Geometry::Mesh;
+using Geometry::Material;
 using Renderers2::OpenGL::LightVisitor;
 
-class PhongShader: public ShaderResource {
+class PhongShader: public ShaderResource
+                 , public IListener<Material::ChangedEventArg> {
 private:
     void AddDefine(string name);
     void AddDefine(string name, int val);
     string defines;
+
+    void UpdateMaterial(Material* mat);
+
 public:
     PhongShader(Mesh* mesh);
     virtual ~PhongShader();
@@ -38,6 +44,8 @@ public:
 
     string GetVertexShader();
     string GetFragmentShader();
+
+    void Handle(Material::ChangedEventArg arg);
 };
 
 }

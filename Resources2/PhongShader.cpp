@@ -41,13 +41,22 @@ void PhongShader::AddDefine(string name, int val) {
     defines += def;
 }
 
+void PhongShader::UpdateMaterial(Material* mat) {
+    GetUniform("frontMaterial.ambient").Set(mat->ambient);
+    GetUniform("frontMaterial.diffuse").Set(mat->diffuse);
+    GetUniform("frontMaterial.specular").Set(mat->specular);
+    GetUniform("frontMaterial.shininess").Set(mat->shininess);
+} 
+
 PhongShader::PhongShader(Mesh* mesh)
     : ShaderResource(*ResourceManager<ShaderResource>::Create("shaders/PhongShaderESCompatible.glsl").get())
 {
-    ShaderResource::Load();
+    ShaderResource::Load();    
     // logger.info << "phong" << logger.end;
 
     Material* mat = mesh->GetMaterial().get();
+    mat->changedEvent.Attach(*this);
+
     IDataBlockPtr tans = mesh->GetGeometrySet()->GetAttributeList("tangent");
     IDataBlockPtr bitans = mesh->GetGeometrySet()->GetAttributeList("bitangent");
 
@@ -230,6 +239,11 @@ string PhongShader::GetVertexShader() {
 string PhongShader::GetFragmentShader() {
     return defines + fragmentShader;
 }
+
+void PhongShader::Handle(Material::ChangedEventArg arg) {
+    UpdateMaterial(arg.material);
+}
+
 
 }
 }
