@@ -568,6 +568,39 @@ GLuint GLContext::LoadShader(Shader* shad) {
     return shaderId;
 }
 
+void GLContext::BindUniform(Uniform& uniform, GLint loc) {
+    const Uniform::Data data = uniform.GetData();
+    switch (uniform.GetKind()) {
+    case Uniform::INT:
+        glUniform1i(loc, data.i);
+        break;
+    case Uniform::FLOAT:
+        glUniform1f(loc, data.f);
+        break;
+    case Uniform::FLOAT2:
+        glUniform2fv(loc, 1, data.fv);
+        break;
+    case Uniform::FLOAT3:
+        glUniform3fv(loc, 1, data.fv);
+        break;
+    case Uniform::FLOAT4:
+        glUniform4fv(loc, 1, data.fv);
+        break;
+    case Uniform::MAT3X3:
+        glUniformMatrix3fv(loc, 1, false, data.fv);
+        break;
+    case Uniform::MAT4X4:
+        glUniformMatrix4fv(loc, 1, false, data.fv);
+        break;            
+    case Uniform::UNKNOWN:
+#if OE_SAFE
+        throw Exception("Unknown uniform kind.");
+#endif
+        break;
+    }
+    CHECK_FOR_GL_ERROR();
+}
+
 GLContext::GLShader GLContext::ResolveLocations(GLuint id, Shader* shad) {
     GLContext::GLShader glshader;
     glshader.id = id;
@@ -604,13 +637,21 @@ GLContext::GLShader GLContext::ResolveLocations(GLuint id, Shader* shad) {
                 glshader.cubemaps.push_back(make_pair(&shad->GetCubemap(string(name)), i));
                 break;
         default:
-            glshader.uniforms.push_back(make_pair(&shad->GetUniform(string(name)), i));
+            glshader.uniforms[&shad->GetUniform(string(name))] = i;
         }
     } 
     delete[] name; 
 
-    // set the texture unit locations
     glUseProgram(glshader.id);
+    // bind the uniforms set at resolve time
+    for (map<Uniform*, GLint>::iterator it = glshader.uniforms.begin();
+         it != glshader.uniforms.end(); ++it) {
+        Uniform& uniform = *it->first;
+        if (uniform.GetKind() != Uniform::UNKNOWN)
+            BindUniform(uniform, it->second);
+    }
+
+    // set the texture unit locations
     GLuint texUnit = 0;
     for (; texUnit < glshader.textures.size(); ++texUnit) {
         GLint loc = glshader.textures[texUnit].second;
@@ -666,6 +707,7 @@ GLContext::GLShader GLContext::LookupShader(Shader* shad) {
     GLContext::GLShader glshader = ResolveLocations(id, shad);
     shaders[shad] = glshader;
     shad->ChangedEvent().Attach(*this);
+    shad->UniformChangedEvent().Attach(*this);
     return glshader;
 }
 
@@ -705,6 +747,7 @@ void GLContext::ReleaseShaders() {
     map<Shader*, GLShader>::iterator it = shaders.begin();
     for (; it != shaders.end(); ++it) {
         it->first->ChangedEvent().Detach(*this);
+        it->first->UniformChangedEvent().Detach(*this);
         GLuint shads[2];
         GLsizei count;
         glGetAttachedShaders(it->second.id, 2, &count, shads);
@@ -739,6 +782,19 @@ void GLContext::Handle(Shader::ChangedEventArg arg) {
     shaders[arg.shader] = ResolveLocations(newid, arg.shader);
 }
 
+void GLContext::Handle(Uniform::ChangedEventArg arg) {
+    // logger.info << "changed" << logger.end;
+    const GLContext::GLShader glshader = LookupShader(arg.shader);
+    map<Uniform*, GLint>::const_iterator it = glshader.uniforms.find(arg.uniform);
+    if (it == glshader.uniforms.end())
+        return;
+    // just rebind immediately
+    // todo: queue this operation
+    glUseProgram(glshader.id);
+    BindUniform(*arg.uniform, it->second);
+    glUseProgram(0);
+}
+
 void GLContext::Handle(Texture2DChangedEventArg arg) {
     ITexture2D* texr = arg.resource.get();
     //reload texture
@@ -762,7 +818,6 @@ void GLContext::Handle(Texture2DChangedEventArg arg) {
                     texr->GetVoidDataPtr());
     CHECK_FOR_GL_ERROR();
     glBindTexture(GL_TEXTURE_2D, 0);
-
 }
 
 void GLContext::Handle(IDataBlockChangedEventArg arg) {    

@@ -22,43 +22,43 @@ Uniform::~Uniform() {
 void Uniform::Set(int v) {
     data.i = v;
     kind = Uniform::INT;
-    // shader->uniformChangedEvent.Notify(Uniform::ChangedEventArg(shader, *this));
+    shader->uniformChangedEvent.Notify(Uniform::ChangedEventArg(shader, this));
 }
     
 void Uniform::Set(float v) {
     data.f = v;
     kind = Uniform::FLOAT;
-    // shader->uniformChangedEvent.Notify(Uniform::ChangedEventArg(shader, *this));
+    shader->uniformChangedEvent.Notify(Uniform::ChangedEventArg(shader, this));
 }
     
 void Uniform::Set(Vector<2,float> v) {
     v.ToArray(data.fv);
     kind = Uniform::FLOAT2;
-    // shader->uniformChangedEvent.Notify(Uniform::ChangedEventArg(shader, *this));
+    shader->uniformChangedEvent.Notify(Uniform::ChangedEventArg(shader, this));
 }
 
 void Uniform::Set(Vector<3,float> v) {
     v.ToArray(data.fv);
     kind = Uniform::FLOAT3;
-    // shader->uniformChangedEvent.Notify(Uniform::ChangedEventArg(shader, *this));
+    shader->uniformChangedEvent.Notify(Uniform::ChangedEventArg(shader, this));
 }
     
 void Uniform::Set(Vector<4,float> v) {
     v.ToArray(data.fv);
     kind = Uniform::FLOAT4;
-    // shader->uniformChangedEvent.Notify(Uniform::ChangedEventArg(shader, *this));
+    shader->uniformChangedEvent.Notify(Uniform::ChangedEventArg(shader, this));
 }
 
 void Uniform::Set(Matrix<3,3,float> v) {
     v.ToArray(data.fv);
     kind = Uniform::MAT3X3;
-    // shader->uniformChangedEvent.Notify(Uniform::ChangedEventArg(shader, *this));
+    shader->uniformChangedEvent.Notify(Uniform::ChangedEventArg(shader, this));
 }
     
 void Uniform::Set(Matrix<4,4,float> v) {
     v.ToArray(data.fv);
     kind = Uniform::MAT4X4;
-    // shader->uniformChangedEvent.Notify(Uniform::ChangedEventArg(shader, *this));
+    shader->uniformChangedEvent.Notify(Uniform::ChangedEventArg(shader, this));
 }
 
 Uniform::Kind Uniform::GetKind() {
@@ -79,7 +79,6 @@ Shader::Shader(string vertexShader, string fragmentShader)
 
 Shader::~Shader() {
     // todo: delete boxes and uniforms and fire destroyedEvent.
-
 }
 
 Uniform& Shader::GetUniform(string name) {

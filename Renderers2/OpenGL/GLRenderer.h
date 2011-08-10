@@ -97,7 +97,6 @@ private:
     Core::ProcessEventArg arg;
     
     ShaderResourcePtr quadShader;
-
 public:
     GLRenderer(GLContext* ctx);
     virtual ~GLRenderer();

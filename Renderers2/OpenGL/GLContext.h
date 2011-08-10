@@ -67,13 +67,14 @@ enum GLSLVersion { GLSL_UNKNOWN, GLSL_NONE, GLSL_14, GLSL_20 };
  * @class GLContext GLContext.h Renderers2/OpenGL/GLContext.h
  */
 class GLContext: public IListener<Shader::ChangedEventArg>
+               , public IListener<Uniform::ChangedEventArg>
                , public IListener<Texture2DChangedEventArg> 
                , public IListener<IDataBlockChangedEventArg> {
 public:
     // structure containing the uniform locations.
     struct GLShader {
         GLuint id;
-        vector<pair<Uniform*, GLint> > uniforms;
+        map<Uniform*, GLint> uniforms;
         vector<pair<Box<IDataBlockPtr>*, GLint> > attributes;
         vector<pair<Box<ITexture2DPtr>*, GLint> > textures;
         vector<pair<Box<ICubemapPtr>*, GLint> > cubemaps;
@@ -86,22 +87,19 @@ private:
     GLSLVersion glslversion;
     bool init, fboSupport, vboSupport, shaderSupport;
     map<ICanvas*, Attachments> attachments; // color attachments and depth attachment
-    map<ICanvas*, GLuint> fbos;              // association with fbo
-    // map<ICanvas*, GLuint> canvases;          // other canvases need only a single color attachment
+    map<ICanvas*, GLuint> fbos;             // association with fbo
     map<ITexture2D*, GLuint> textures;
     map<IDataBlock*, GLuint> vbos;
     map<ICubemap*, GLuint> cubemaps;
     map<Shader*, GLShader> shaders;
 
-    // GLuint LoadCanvas(ICanvas* can);
-
     // GPU creation routines
-    //Attachments LoadCanvas(Canvas3D* can, GLuint color0);
     Attachments LoadCanvas(ICanvas* can);
     GLuint LoadTexture(ITexture2D* tex);
     GLuint LoadVBO(IDataBlock* db);
     GLuint LoadShader(Shader* shad);
     GLuint LoadCubemap(ICubemap* cube);
+    inline void BindUniform(Uniform& uniform, GLint loc);
     inline GLShader ResolveLocations(GLuint id, Shader* shad);
     inline void SetupTexParameters(ITexture2D* tex);
 public:
@@ -117,8 +115,6 @@ public:
     // lookup routines. If no map contains the requested object the
     // creation routines will be invoked.
     GLuint LookupFBO(ICanvas* can);
-    //GLuint LookupFBO(Canvas3D* can);
-    //GLuint LookupCanvas(ICanvas* can);
     Attachments& LookupCanvas(Canvas2D* can);
     Attachments& LookupCanvas(ICanvas* can);
     GLuint LookupTexture(ITexture2D* tex);
@@ -138,6 +134,7 @@ public:
     static unsigned int GLTypeSize(Type t);
 
     void Handle(Shader::ChangedEventArg arg);
+    void Handle(Uniform::ChangedEventArg arg);
     void Handle(Texture2DChangedEventArg arg);
     void Handle(IDataBlockChangedEventArg arg);
 };

@@ -402,7 +402,7 @@ GLContext* GLRenderer::GetContext() {
 }
 
 void GLRenderer::BindUniforms(GLContext::GLShader& glshader) {
-    vector<pair<Uniform*, GLint> >::iterator it = glshader.uniforms.begin();
+    map<Uniform*, GLint>::iterator it = glshader.uniforms.begin();
     for (; it != glshader.uniforms.end(); ++it) {
         Uniform& uniform = *it->first;
         GLint loc = it->second; 
@@ -460,12 +460,6 @@ void GLRenderer::BindAttributes(GLContext::GLShader& glshader) {
 }
 
 void GLRenderer::UnbindAttributes(GLContext::GLShader& glshader) {
-    // vector<pair<Box<IDataBlockPtr>*, GLint> >::iterator it = glshader.attributes.begin();
-    // for (; it != glshader.attributes.end(); ++it) {
-    //     logger.info << "disable attrib: " << it->second << logger.end;
-    //     glDisableVertexAttribArray(it->second);
-    //     CHECK_FOR_GL_ERROR();
-    // }
     for (unsigned int i = 0; i < glshader.attributes.size(); ++i) {
         glDisableVertexAttribArray(i);
         CHECK_FOR_GL_ERROR();
@@ -473,7 +467,6 @@ void GLRenderer::UnbindAttributes(GLContext::GLShader& glshader) {
 }
 
 void GLRenderer::BindTextures2D(GLContext::GLShader& glshader) {
-    // vector<pair<Box<ITexture2DPtr>*, GLint> >::iterator tex_it = glshader.textures.begin();
     GLuint texUnit = 0;
     for (; texUnit < glshader.textures.size(); ++texUnit) {
         glActiveTexture(GL_TEXTURE0 + texUnit);
@@ -507,7 +500,6 @@ void GLRenderer::UnbindTextures2D(GLContext::GLShader& glshader) {
 GLuint GLRenderer::Apply(Shader* shader) {
     GLContext::GLShader glshader = ctx->LookupShader(shader);
     glUseProgram(glshader.id);
-    BindUniforms(glshader);
     BindAttributes(glshader);
     BindTextures2D(glshader);
     return glshader.id;

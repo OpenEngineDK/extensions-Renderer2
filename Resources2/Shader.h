@@ -59,13 +59,13 @@ public:
         };
     };
 
-    // class ChangedEventArg {
-    // public:
-    //     ChangedEventArg(Shader* shader, Uniform& uniform): shader(shader), uniform(uniform) {}
-    //     virtual ~ChangedEventArg() {}
-    //     Shader* shader;
-    //     Uniform& uniform;
-    // };
+    class ChangedEventArg {
+    public:
+        ChangedEventArg(Shader* shader, Uniform* uniform): shader(shader), uniform(uniform) {}
+        virtual ~ChangedEventArg() {}
+        Shader* shader;
+        Uniform* uniform;
+    };
 
 private:
     Shader* shader;
@@ -101,9 +101,6 @@ class Shader {
 friend class Uniform;
 public:    
     typedef map<string, Uniform*>::iterator UniformIterator;
-    // typedef map<string, Box<IDataBlockPtr>*>::iterator AttributeIterator;
-    // typedef map<string, Box<ITexture2DPtr>*>::iterator Texture2DIterator;
-    // typedef map<string, Box<ICubemapPtr>*>::iterator CubemapIterator;
     class ChangedEventArg {
     public:
         ChangedEventArg(Shader* shader): shader(shader) {}
@@ -118,7 +115,7 @@ private:
 protected:
     string vertexShader, fragmentShader;
     Event<ChangedEventArg> changedEvent;
-    // Event<Uniform::ChangedEventArg> uniformChangedEvent;
+    Event<Uniform::ChangedEventArg> uniformChangedEvent;
 public:
     Shader();
     Shader(string vertexShader, string fragmentShader);
@@ -127,34 +124,14 @@ public:
     Uniform& GetUniform(string name);
     
     Box<IDataBlockPtr>& GetAttribute(string name);
-
-    // void SetAttribute(string name, IDataBlockPtr attr);
-    // void UnsetAttribute(string name);
-
     Box<ITexture2DPtr>& GetTexture2D(string name);
-    // void SetTexture2D(string name, ITexture2DPtr tex);
-    // void UnsetTexture2D(string name);
-
     Box<ICubemapPtr>& GetCubemap(string name);
-    // void SetCubemap(string name, ICubemapPtr tex);
-    // void UnsetCubemap(string name);
 
     virtual string GetVertexShader(); 
     virtual string GetFragmentShader();
 
-    // UniformIterator UniformsBegin();
-    // UniformIterator UniformsEnd();
-
-    // AttributeIterator AttributesBegin();
-    // AttributeIterator AttributesEnd();
-
-    // Texture2DIterator Textures2DBegin();
-    // Texture2DIterator Textures2DEnd();
-
-    // CubemapIterator CubemapsBegin();
-    // CubemapIterator CubemapsEnd();
-
     IEvent<ChangedEventArg>& ChangedEvent() { return changedEvent; }
+    IEvent<Uniform::ChangedEventArg>& UniformChangedEvent() { return uniformChangedEvent; }
 };
 
 } // NS Resources
