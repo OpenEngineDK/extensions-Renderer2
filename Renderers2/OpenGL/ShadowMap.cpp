@@ -31,12 +31,27 @@ using namespace Geometry;
 using Display2::Canvas3D;
 using Resources2::ShaderResource;
 
+    string vert = 
+        "   uniform mat4 modelViewProjectionMatrix; \n                  \
+            attribute vec3 vertex;  \n                                  \
+            void main() { \n                                            \
+              gl_Position = modelViewProjectionMatrix * vec4(vertex, 1.0); \n \
+            }";
+        
+    string frag = " void main() { }";
+    
 ShadowMap::DepthRenderer::DepthRenderer(unsigned int width, unsigned int height)
   : width(width) 
   , height(height)
   , canvas(new Canvas3D(width,height))
+  , shader(new Shader(vert, frag))
+  , mvpUniform(shader->GetUniform("modelViewProjectionMatrix"))
+  , vertAttrib(shader->GetAttribute("vertex"))
+  , ctx(NULL)
+  , renderer(NULL)
+  , num1(2.1)
+  , num2(4.0)
 {
-    
 }
 
 void ShadowMap::DepthRenderer::Initialize(GLContext* ctx, Shader* shader) {
@@ -47,7 +62,9 @@ void ShadowMap::DepthRenderer::Initialize(GLContext* ctx, Shader* shader) {
     shader->GetTexture2D("shadow").Set(atts.depth);
 }
 
-void ShadowMap::DepthRenderer::Render(ISceneNode* scene, IViewingVolume& cam, GLContext* ctx) {
+void ShadowMap::DepthRenderer::Render(ISceneNode* scene, IViewingVolume& cam, GLRenderer* renderer) {
+    this->renderer = renderer;
+    ctx = renderer->GetContext();
     modelViewMatrix = cam.GetViewMatrix();
     projectionMatrix = cam.GetProjectionMatrix();
 
@@ -70,43 +87,13 @@ void ShadowMap::DepthRenderer::Render(ISceneNode* scene, IViewingVolume& cam, GL
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_POLYGON_OFFSET_FILL);
-    //glPolygonOffset(2.1, 4.0);
-
-    // Select The Projection Matrix
-    glMatrixMode(GL_PROJECTION);
-    CHECK_FOR_GL_ERROR();
-
-    // Reset The Projection Matrix
-    glLoadIdentity();
-    CHECK_FOR_GL_ERROR();
-
-    // Setup OpenGL with the volumes projection matrix
-    Matrix<4,4,float> projMatrix = cam.GetProjectionMatrix();
-    float arr[16] = {0};
-    projMatrix.ToArray(arr);
-    glMultMatrixf(arr);
-    CHECK_FOR_GL_ERROR();
-
-    // Select the modelview matrix
-    glMatrixMode(GL_MODELVIEW);
-    CHECK_FOR_GL_ERROR();
-
-    // Reset the modelview matrix
-    glLoadIdentity();
-    CHECK_FOR_GL_ERROR();
-
-    // Get the view matrix and apply it
-    Matrix<4,4,float> matrix = cam.GetViewMatrix();
-    float f[16] = {0};
-    matrix.ToArray(f);
-    glMultMatrixf(f);
-    CHECK_FOR_GL_ERROR();
+    // glEnable(GL_POLYGON_OFFSET_FILL);
+    // glPolygonOffset(num1, num2);
 
     // Draw it
     scene->Accept(*this);
 
-    glDisable(GL_POLYGON_OFFSET_FILL);
+    // glDisable(GL_POLYGON_OFFSET_FILL);
     glCullFace(GL_BACK);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
@@ -114,58 +101,46 @@ void ShadowMap::DepthRenderer::Render(ISceneNode* scene, IViewingVolume& cam, GL
 }
 
 void ShadowMap::DepthRenderer::VisitTransformationNode(TransformationNode* node) {
-
     Matrix<4,4,float> m = node->GetTransformationMatrix();
-    float f[16];
-    m.ToArray(f);
-    glPushMatrix();
-    glMultMatrixf(f);
-    CHECK_FOR_GL_ERROR();
+    Matrix<4,4,float> oldMv = modelViewMatrix;
+    modelViewMatrix = m * modelViewMatrix;
     node->VisitSubNodes(*this);
-    glPopMatrix();
-    CHECK_FOR_GL_ERROR();
-
-    // Matrix<4,4,float> m = node->GetTransformationMatrix();
-    // Matrix<4,4,float> oldMv = modelViewMatrix;
-    // modelViewMatrix = m * modelViewMatrix;
-    // node->VisitSubNodes(*this);
-    // modelViewMatrix = oldMv;
+    modelViewMatrix = oldMv;
 }
 
 void ShadowMap::DepthRenderer::VisitMeshNode(MeshNode* node) {
     MeshPtr mesh = node->GetMesh();
     GeometrySetPtr geom = mesh->GetGeometrySet();
 
-    glDisableClientState(GL_NORMAL_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    glEnableClientState(GL_VERTEX_ARRAY);
+    vertAttrib.Set(geom->GetVertices());
+    mvpUniform.Set(modelViewMatrix * projectionMatrix);
 
-    IDataBlockPtr v = geom->GetVertices();
-
-    glBindBuffer(GL_ARRAY_BUFFER, v->GetID());
-    if (v->GetID() != 0)
-        glVertexPointer(v->GetDimension(), GL_FLOAT, 0, 0);
-    else
-        glVertexPointer(v->GetDimension(), GL_FLOAT, 0, v->GetVoidDataPtr());
-
-
-    CHECK_FOR_GL_ERROR();
-
-    IndicesPtr indexBuffer = mesh->GetIndices();
+    IDataBlock* indices = mesh->indices.get();
     GLsizei count = mesh->GetDrawingRange();
     unsigned int offset = mesh->GetIndexOffset();
     Geometry::Type type = mesh->GetType();
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->GetID());
-    if (indexBuffer->GetID() != 0){
-        glDrawElements(type, count, GL_UNSIGNED_INT, (GLvoid*)(offset * sizeof(GLuint)));
+
+    renderer->Apply(shader);
+    
+    if (ctx->VBOSupport()) {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ctx->LookupVBO(indices));
+        glDrawElements(type, 
+                       count, 
+                       indices->GetType(), 
+                       (GLvoid*)(offset * GLContext::GLTypeSize(indices->GetType())));
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
     else {
-        glDrawElements(type, count, GL_UNSIGNED_INT, indexBuffer->GetData() + offset);
+        glDrawElements(type,
+                       count,
+                       indices->GetType(),
+                       (char*)indices->GetVoidDataPtr() + offset * GLContext::GLTypeSize(indices->GetType()));
     }
-
-    node->VisitSubNodes(*this);
     CHECK_FOR_GL_ERROR();
+
+    renderer->Release(shader);
+    
+    node->VisitSubNodes(*this);
 }
 
 ShadowMap::ShadowMap(unsigned int width, unsigned int height)
@@ -201,7 +176,7 @@ void ShadowMap::Handle(RenderingEventArg arg) {
     // else if (arg.renderer.GetCurrentStage() == GLRenderer::RENDERER_PREPROCESS) {
     // }
     else {           
-        depthRenderer.Render(arg.canvas->GetScene(), *viewingVolume, ctx);
+        depthRenderer.Render(arg.canvas->GetScene(), *viewingVolume, &arg.renderer);
         
         const Matrix<4,4,float> bias(.5, .0, .0,  .0,
                                      .0, .5, .0,  .0,
@@ -210,7 +185,8 @@ void ShadowMap::Handle(RenderingEventArg arg) {
         
         lightMatrix.Set(viewingVolume->GetViewMatrix() *
                         viewingVolume->GetProjectionMatrix() * 
-                        bias);
+                        bias
+                        );
         
         viewProjectionInverse.Set((arg.canvas->GetViewingVolume()->GetViewMatrix() * 
                                    arg.canvas->GetViewingVolume()->GetProjectionMatrix()).GetInverse());
@@ -248,6 +224,13 @@ void ShadowMap::Handle(RenderingEventArg arg) {
     } 
 }
 
+void ShadowMap::SetMagicNumber1(float num) {
+    depthRenderer.num1 = num;
+}
+
+void ShadowMap::SetMagicNumber2(float num) {
+    depthRenderer.num2 = num;
+}
 
 }
 }

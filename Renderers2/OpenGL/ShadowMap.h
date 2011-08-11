@@ -31,6 +31,7 @@ namespace OpenEngine {
         class Canvas3D;
     }
     namespace Resources2 {
+        class Shader;
         class ShaderResource;
         class Uniform;
         typedef boost::shared_ptr<ShaderResource> ShaderResourcePtr;
@@ -49,6 +50,7 @@ using Math::Matrix;
 using Display::IViewingVolume;
 using Display2::Canvas3D;
 using Resources2::ShaderResourcePtr;
+using Resources2::Shader;
 using Resources2::Uniform;
 
 /**
@@ -65,10 +67,16 @@ private:
         Matrix<4,4,float> modelViewMatrix, projectionMatrix;
         unsigned int width, height;
         Canvas3D* canvas;
+        Shader* shader;
+        Uniform& mvpUniform;
+        Box<IDataBlockPtr>& vertAttrib;
+        GLContext* ctx;
+        GLRenderer* renderer;
     public:
+        float num1, num2;        
         DepthRenderer(unsigned int width, unsigned int height);
         void Initialize(GLContext* ctx, Shader* shader);
-        void Render(ISceneNode* root, IViewingVolume& cam, GLContext* ctx);
+        void Render(ISceneNode* root, IViewingVolume& cam, GLRenderer* renderer);
         void VisitTransformationNode(TransformationNode* node);
         void VisitMeshNode(MeshNode* node);
     };
@@ -82,6 +90,9 @@ public:
     ShadowMap(unsigned int width, unsigned int height); 
     void Handle(RenderingEventArg arg);
     void SetViewingVolume(IViewingVolume* v);
+    void SetMagicNumber1(float num);
+    void SetMagicNumber2(float num);
+
 };
 
 } // NS Scene
