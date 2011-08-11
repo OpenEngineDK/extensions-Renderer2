@@ -75,6 +75,8 @@ void ShadowMap::DepthRenderer::Render(ISceneNode* scene, IViewingVolume& cam, GL
 
     // Setup the new frame buffer
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 
+                           ctx->LookupTexture(ctx->LookupCanvas(canvas).color0.get()), 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, 
                            ctx->LookupTexture(ctx->LookupCanvas(canvas).depth.get()), 0);
 

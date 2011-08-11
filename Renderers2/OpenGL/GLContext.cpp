@@ -628,7 +628,7 @@ GLContext::GLShader GLContext::ResolveLocations(GLuint id, Shader* shad) {
         // logger.info << "unif: " << string(name) << logger.end;
 
         GLint loc = glGetUniformLocation(id, name);
-        if (loc == -1) throw Exception("oh my god jesus christ");
+        if (loc == -1) continue;
 
         switch(type) {
         case GL_SAMPLER_2D:
@@ -688,7 +688,7 @@ GLContext::GLShader GLContext::ResolveLocations(GLuint id, Shader* shad) {
                           &type,
                           name);
         GLint loc = glGetAttribLocation(id, name);
-        if (loc == -1) throw Exception("oh my god jesus christ");;
+        if (loc == -1) continue;
         glshader.attributes.push_back(make_pair(&shad->GetAttribute(string(name)), loc)); 
     } 
     delete[] name; 
