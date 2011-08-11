@@ -14,6 +14,7 @@
 #include <Renderers2/OpenGL/CanvasVisitor.h>
 #include <Resources/ResourceManager.h>
 #include <Resources2/ShaderResource.h>
+#include <Resources/DataBlock.h>
 
 #include <Renderers2/OpenGL/GLContext.h>
 #include <Display2/Canvas3D.h>
@@ -34,6 +35,7 @@ using Resources::ResourceManager;
 using Resources::DirectoryManager;
 using Resources2::ShaderResource;
 using Resources2::ShaderResourcePtr;
+using Resources::DataBlock;
 using namespace Math;
 
 GLRenderer::GLRenderer(GLContext* ctx)
@@ -271,6 +273,11 @@ void GLRenderer::Render(Canvas3D* canvas) {
 #endif
     rv->light = lv->GetLights().at(0);
     
+
+    // Setup skybox
+    if (canvas->GetSkybox())
+        RenderSkybox(canvas);
+
     this->stage = RENDERER_PROCESS;
     this->process.Notify(rarg);
     this->stage = RENDERER_POSTPROCESS;
@@ -322,6 +329,58 @@ void GLRenderer::Handle(Core::InitializeEventArg arg) {
     canvas->Accept(*cv);
 
     init = true;
+}
+
+void GLRenderer::RenderSkybox(Canvas3D* canvas) {
+#if FIXED_FUNCTION
+    // Do nothing in fixed function, who needs it anyway :)
+    // except for the shadersupport check ;-)
+if (ctx->ShaderSupport()) {        
+#endif
+    // Draw skybox to background
+    static Shader* skybox = NULL;
+    if (skybox == NULL){
+        string vert = 
+            "uniform mat4 oe_ViewProjMatrixInverse; \n                    \
+            attribute vec2 oe_Vertex; \n                                  \
+            varying vec3 eyedir; \n                                       \
+            void main() { \n                                              \
+            gl_Position.xy = oe_Vertex; \n                                   \
+            gl_Position.zw = vec2(0.0, 1.0);                              \
+            vec4 dir = vec4(oe_Vertex.x, oe_Vertex.y, 1.0, 1.0);\n        \
+            eyedir = -normalize((oe_ViewProjMatrixInverse * dir).xyz); \n \
+            }";
+        
+        string frag = 
+            "uniform samplerCube skybox; \n\
+            varying vec3 eyedir; \n\
+            void main() { gl_FragColor = textureCube(skybox, eyedir); }";
+        skybox = new Shader(vert, frag);
+        const float verts[4 * 2] = {
+            -1.0f, 1.0f,
+            -1.0f, -1.0f,
+            1.0f, 1.0f,
+            1.0f, -1.0f
+        };
+        DataBlock<2,float>* db = new DataBlock<2,float>(4);
+        memcpy(db->GetVoidDataPtr(), verts, 4 * 2 * sizeof(float));
+        skybox->GetAttribute("oe_Vertex").Set(IDataBlockPtr(db));
+    }
+
+    skybox->GetCubemap("skybox").Set(canvas->GetSkybox());
+    Matrix<4,4,float> viewProjInv = (canvas->GetViewingVolume()->GetViewMatrix() * 
+                                     canvas->GetViewingVolume()->GetProjectionMatrix()).GetInverse();
+    skybox->GetUniform("oe_ViewProjMatrixInverse").Set(viewProjInv);
+
+    glDisable(GL_DEPTH_TEST);
+    Apply(skybox);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    Release(skybox);
+    glEnable(GL_DEPTH_TEST);
+
+#if FIXED_FUNCTION
+ }        
+#endif
 }
     
 void GLRenderer::Handle(Core::DeinitializeEventArg arg) {

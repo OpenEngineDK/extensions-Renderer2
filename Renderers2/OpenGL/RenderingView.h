@@ -71,10 +71,7 @@ private:
 
     vector<RenderObject> transparencyQueue;
 
-    inline void RenderSkybox(const Canvas3D& canvas, GLContext& ctx);
-    
     inline void RenderMesh(Mesh* mesh, Matrix<4,4,float> modelViewMatrix);
-
     inline void ApplyRenderState(RenderStateNode* node);
     inline void BindUniforms(GLContext::GLShader& glshader);
     inline void BindAttributes(GLContext::GLShader& glshader);

@@ -94,6 +94,8 @@ private:
     void BindTextures2D(GLContext::GLShader& glshader);
     void UnbindTextures2D(GLContext::GLShader& glshader);
 
+    inline void RenderSkybox(Canvas3D* canvas);
+
     Core::ProcessEventArg arg;
     
     ShaderResourcePtr quadShader;
