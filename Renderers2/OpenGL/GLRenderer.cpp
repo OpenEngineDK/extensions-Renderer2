@@ -532,11 +532,12 @@ void GLRenderer::BindTextures2D(GLContext::GLShader& glshader) {
         glBindTexture(GL_TEXTURE_2D, ctx->LookupTexture(glshader.textures[texUnit].first->Get().get()));
         CHECK_FOR_GL_ERROR();
     }
+    texUnit = glshader.textures.size();
     for (unsigned int i = 0; i < glshader.cubemaps.size(); ++i) {
-        ++texUnit;
         glActiveTexture(GL_TEXTURE0 + texUnit);
         glBindTexture(GL_TEXTURE_CUBE_MAP, ctx->LookupCubemap(glshader.cubemaps[i].first->Get().get()));
         CHECK_FOR_GL_ERROR();
+        ++texUnit;
     }
 }
 
