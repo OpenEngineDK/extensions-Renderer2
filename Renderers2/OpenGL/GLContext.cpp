@@ -654,6 +654,7 @@ GLContext::GLShader GLContext::ResolveLocations(GLuint id, Shader* shad) {
         if (uniform.GetKind() != Uniform::UNKNOWN)
             BindUniform(uniform, it->second);
     }
+    CHECK_FOR_GL_ERROR();
 
     // set the texture unit locations
     GLuint texUnit = 0;
@@ -662,11 +663,12 @@ GLContext::GLShader GLContext::ResolveLocations(GLuint id, Shader* shad) {
         glUniform1i(loc, texUnit);
         CHECK_FOR_GL_ERROR();
     }
+    texUnit = glshader.textures.size();
     for (unsigned int i = 0; i < glshader.cubemaps.size(); ++i) {
-        ++texUnit;
         GLint loc = glshader.cubemaps[i].second;
         glUniform1i(loc, texUnit);
         CHECK_FOR_GL_ERROR();
+        ++texUnit;
     }
     glUseProgram(0);
 
