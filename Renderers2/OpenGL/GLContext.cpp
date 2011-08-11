@@ -626,18 +626,22 @@ GLContext::GLShader GLContext::ResolveLocations(GLuint id, Shader* shad) {
                            name);
         // logger.info << "type: " << type << logger.end;
         // logger.info << "unif: " << string(name) << logger.end;
+
+        GLint loc = glGetUniformLocation(id, name);
+        if (loc == -1) throw Exception("oh my god jesus christ");
+
         switch(type) {
         case GL_SAMPLER_2D:
         case GL_SAMPLER_2D_SHADOW:
             // logger.info << "sampler2d(shadow)" << logger.end;
-            glshader.textures.push_back(make_pair(&shad->GetTexture2D(string(name)), i));
+            glshader.textures.push_back(make_pair(&shad->GetTexture2D(string(name)), loc));
             break;
         case GL_SAMPLER_CUBE:
                 // logger.info << "samplercube" << logger.end;
-                glshader.cubemaps.push_back(make_pair(&shad->GetCubemap(string(name)), i));
+                glshader.cubemaps.push_back(make_pair(&shad->GetCubemap(string(name)), loc));
                 break;
         default:
-            glshader.uniforms[&shad->GetUniform(string(name))] = i;
+            glshader.uniforms[&shad->GetUniform(string(name))] = loc;
         }
     } 
     delete[] name; 
@@ -675,7 +679,6 @@ GLContext::GLShader GLContext::ResolveLocations(GLuint id, Shader* shad) {
                    &maxLength);
     name = new char[maxLength+1];
 
-    vector<string> names(count);
     for (int i = 0; i < count; ++i) {
         glGetActiveAttrib(id,
                           i,
@@ -684,18 +687,12 @@ GLContext::GLShader GLContext::ResolveLocations(GLuint id, Shader* shad) {
                           &size,
                           &type,
                           name);
-        names.push_back(string(name));
+        GLint loc = glGetAttribLocation(id, name);
+        if (loc == -1) throw Exception("oh my god jesus christ");;
+        glshader.attributes.push_back(make_pair(&shad->GetAttribute(string(name)), loc)); 
     } 
     delete[] name; 
 
-    // Double check the names and locations... since they were not correct on linux :(
-    vector<string>::iterator it = names.begin();
-    for (; it != names.end(); ++it) {
-        GLint loc = glGetAttribLocation(id, it->c_str());
-        if (loc == -1) continue;
-        glshader.attributes.push_back(make_pair(&shad->GetAttribute(*it), loc)); 
-        
-    }
     return glshader;
 }
 
