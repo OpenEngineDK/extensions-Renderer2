@@ -47,6 +47,12 @@ void main(void) {
 
     float d2 = shadow2D(depth, vec3(screenUV,0.0)).x;
 
+    if (d2 == 1.0) {
+        gl_FragColor = texture2D(color0, screenUV);
+        gl_FragDepth = shadow2D(depth, vec3(screenUV,0.0)).x;
+        return;
+    }
+
     float l = lookup(shadow, coord, vec2(0.0, 0.0), amount);
     l += lookup(shadow, coord, vec2(sd, sd), amount);
     l += lookup(shadow, coord, vec2(sd, -sd), amount);

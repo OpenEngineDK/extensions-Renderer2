@@ -89,13 +89,13 @@ void ShadowMap::DepthRenderer::Render(ISceneNode* scene, IViewingVolume& cam, GL
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
     glEnable(GL_DEPTH_TEST);
-    // glEnable(GL_POLYGON_OFFSET_FILL);
-    // glPolygonOffset(num1, num2);
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(num1, num2);
 
     // Draw it
     scene->Accept(*this);
 
-    // glDisable(GL_POLYGON_OFFSET_FILL);
+    glDisable(GL_POLYGON_OFFSET_FILL);
     glCullFace(GL_BACK);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
@@ -150,6 +150,7 @@ ShadowMap::ShadowMap(unsigned int width, unsigned int height)
   , shader(ResourceManager<ShaderResource>::Create("shaders/shadowmap.glsl"))
   , lightMatrix(shader->GetUniform("lightMat"))
   , viewProjectionInverse(shader->GetUniform("viewProjectionInverse"))
+  , active(true)
 {
     shader->Load();
 }
@@ -178,6 +179,7 @@ void ShadowMap::Handle(RenderingEventArg arg) {
     // else if (arg.renderer.GetCurrentStage() == GLRenderer::RENDERER_PREPROCESS) {
     // }
     else {           
+        if (!active) return;
         depthRenderer.Render(arg.canvas->GetScene(), *viewingVolume, &arg.renderer);
         
         const Matrix<4,4,float> bias(.5, .0, .0,  .0,

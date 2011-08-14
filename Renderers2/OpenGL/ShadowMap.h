@@ -87,6 +87,7 @@ private:
     Uniform &lightMatrix, &viewProjectionInverse;
     
 public:
+    bool active;
     ShadowMap(unsigned int width, unsigned int height); 
     void Handle(RenderingEventArg arg);
     void SetViewingVolume(IViewingVolume* v);
