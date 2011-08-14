@@ -60,6 +60,8 @@ void ShadowMap::DepthRenderer::Initialize(GLContext* ctx, Shader* shader) {
     }
     GLContext::Attachments atts = ctx->LookupCanvas(canvas);
     shader->GetTexture2D("shadow").Set(atts.depth);
+    shader->GetUniform("sdx").Set(1.0f/float(width));
+    shader->GetUniform("sdy").Set(1.0f/float(height));
 }
 
 void ShadowMap::DepthRenderer::Render(ISceneNode* scene, IViewingVolume& cam, GLRenderer* renderer) {
@@ -88,7 +90,7 @@ void ShadowMap::DepthRenderer::Render(ISceneNode* scene, IViewingVolume& cam, GL
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
-    glEnable(GL_DEPTH_TEST);
+    // glEnable(GL_DEPTH_TEST);
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(num1, num2);
 

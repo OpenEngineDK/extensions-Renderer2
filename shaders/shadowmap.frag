@@ -8,7 +8,10 @@ uniform mat4 lightMat;
 uniform mat4 viewProjectionInverse;
 
 
+uniform float sdx, sdy;
 varying vec2 screenUV;
+
+
 
 float lookup(sampler2DShadow ShadowMap, vec4 ShadowCoord, vec2 v, float ShadowAmount) {
     float d = shadow2DProj(ShadowMap,ShadowCoord + vec4(v,0,0)).r;
@@ -43,7 +46,7 @@ void main(void) {
 
     float sd=.05;
 
-    float amount = 0.5;
+    float amount = 0.65;
 
     float d2 = shadow2D(depth, vec3(screenUV,0.0)).x;
 
@@ -54,15 +57,15 @@ void main(void) {
     }
 
     float l = lookup(shadow, coord, vec2(0.0, 0.0), amount);
-    l += lookup(shadow, coord, vec2(sd, sd), amount);
-    l += lookup(shadow, coord, vec2(sd, -sd), amount);
-    l += lookup(shadow, coord, vec2(-sd, sd), amount);
-    l += lookup(shadow, coord, vec2(-sd, -sd), amount);
+    l += lookup(shadow, coord, vec2(sdx, sdy), amount);
+    l += lookup(shadow, coord, vec2(sdx, -sdy), amount);
+    l += lookup(shadow, coord, vec2(-sdx, sdy), amount);
+    l += lookup(shadow, coord, vec2(-sdx, -sdy), amount);
 
-    l += lookup(shadow, coord, vec2(0.0, sd), amount);
-    l += lookup(shadow, coord, vec2(0.0, -sd), amount);
-    l += lookup(shadow, coord, vec2(sd, 0.0), amount);
-    l += lookup(shadow, coord, vec2(-sd, 0.0), amount);
+    l += lookup(shadow, coord, vec2(0.0, sdy), amount);
+    l += lookup(shadow, coord, vec2(0.0, -sdy), amount);
+    l += lookup(shadow, coord, vec2(sdx, 0.0), amount);
+    l += lookup(shadow, coord, vec2(-sdx, 0.0), amount);
 
 
     l /= 9.0;
