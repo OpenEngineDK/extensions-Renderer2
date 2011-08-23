@@ -102,13 +102,7 @@ void GLRenderer::Render(CompositeCanvas* canvas) {
         GLContext::GLShader glShader = ctx->LookupShader(quadShader.get());
         GLuint shaderId = glShader.id;
         glUseProgram(shaderId);
-        
-        const GLint vsLoc = glGetAttribLocation(shaderId, "vertex");
-        const GLint tcLoc = glGetAttribLocation(shaderId, "tcIn");
-        const GLint clLoc = glGetUniformLocation(shaderId, "color");
-        const GLint txLoc = glGetUniformLocation(shaderId, "texIn");
-        const GLint dimLoc = glGetUniformLocation(shaderId, "dims");
-                
+                        
         glEnableVertexAttribArray(vsLoc);
         glEnableVertexAttribArray(tcLoc);
         CHECK_FOR_GL_ERROR();
@@ -324,6 +318,17 @@ void GLRenderer::Handle(Core::InitializeEventArg arg) {
     this->initialize.Notify(RenderingEventArg(NULL, *this));
     this->stage = RENDERER_PREPROCESS;
     CHECK_FOR_GL_ERROR();
+
+
+    // resolve quadShader locations
+    GLContext::GLShader glShader = ctx->LookupShader(quadShader.get());
+    GLuint shaderId = glShader.id;
+    vsLoc = glGetAttribLocation(shaderId, "vertex");
+    tcLoc = glGetAttribLocation(shaderId, "tcIn");
+    clLoc = glGetUniformLocation(shaderId, "color");
+    txLoc = glGetUniformLocation(shaderId, "texIn");
+    dimLoc = glGetUniformLocation(shaderId, "dims");
+
 
     // traverse scene graph to load gpu resource.
     canvas->Accept(*cv);

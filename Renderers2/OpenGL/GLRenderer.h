@@ -99,6 +99,7 @@ private:
     Core::ProcessEventArg arg;
     
     ShaderResourcePtr quadShader;
+    GLuint vsLoc, tcLoc, clLoc, txLoc, dimLoc;
 public:
     GLRenderer(GLContext* ctx);
     virtual ~GLRenderer();
