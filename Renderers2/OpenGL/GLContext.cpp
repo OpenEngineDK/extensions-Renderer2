@@ -783,15 +783,12 @@ void GLContext::Handle(Shader::ChangedEventArg arg) {
 
 void GLContext::Handle(Uniform::ChangedEventArg arg) {
     // logger.info << "changed" << logger.end;
+    // Queue uniform for reloading
     const GLContext::GLShader glshader = LookupShader(arg.shader);
     map<Uniform*, GLint>::const_iterator it = glshader.uniforms.find(arg.uniform);
     if (it == glshader.uniforms.end())
         return;
-    // just rebind immediately
-    // todo: queue this operation
-    glUseProgram(glshader.id);
-    BindUniform(*arg.uniform, it->second);
-    glUseProgram(0);
+    uniformQueue[arg.shader].insert(arg.uniform);
 }
 
 void GLContext::Handle(Texture2DChangedEventArg arg) {
@@ -835,6 +832,19 @@ void GLContext::Handle(IDataBlockChangedEventArg arg) {
     
     if (bo->GetUnloadPolicy() == UNLOAD_AUTOMATIC)
         bo->Unload();
+}
+
+void GLContext::FlushUniforms(Shader* shader) {
+    map<Shader*, set<Uniform*> >::iterator it = uniformQueue.find(shader);
+    if (it == uniformQueue.end()) return;
+    set<Uniform*> uniforms = it->second;
+    GLContext::GLShader glshader = LookupShader(shader);
+    for (set<Uniform*>::iterator it = uniforms.begin();
+         it != uniforms.end(); 
+         ++it) {
+        BindUniform(**it, glshader.uniforms[*it]);
+    }
+    uniformQueue.erase(it);
 }
 
 

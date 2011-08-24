@@ -565,6 +565,7 @@ void GLRenderer::UnbindTextures2D(GLContext::GLShader& glshader) {
 GLuint GLRenderer::Apply(Shader* shader) {
     GLContext::GLShader glshader = ctx->LookupShader(shader);
     glUseProgram(glshader.id);
+    ctx->FlushUniforms(shader);
     BindAttributes(glshader);
     BindTextures2D(glshader);
     return glshader.id;

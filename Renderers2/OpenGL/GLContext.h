@@ -18,6 +18,7 @@
 #include <Utils/Box.h>
 #include <map>
 #include <vector>
+#include <set>
 
 namespace OpenEngine {
     namespace Resources {
@@ -53,6 +54,7 @@ using Utils::Box;
 using std::map;
 using std::pair;
 using std::vector;
+using std::set;
 
 /**
  * OpenGL Shader Language versions
@@ -92,6 +94,8 @@ private:
     map<IDataBlock*, GLuint> vbos;
     map<ICubemap*, GLuint> cubemaps;
     map<Shader*, GLShader> shaders;
+
+    map<Shader*, set<Uniform*> > uniformQueue; // queue to delay uniform updates.
 
     // GPU creation routines
     Attachments LoadCanvas(ICanvas* can);
@@ -137,6 +141,8 @@ public:
     void Handle(Uniform::ChangedEventArg arg);
     void Handle(Texture2DChangedEventArg arg);
     void Handle(IDataBlockChangedEventArg arg);
+
+    void FlushUniforms(Shader* shader);
 };
 
 } // NS OpenGL
