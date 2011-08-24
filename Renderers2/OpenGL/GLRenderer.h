@@ -88,12 +88,6 @@ private:
 
     void ApplyViewingVolume(Display::IViewingVolume& volume);
 
-    void BindUniforms(GLContext::GLShader& glshader);
-    void BindAttributes(GLContext::GLShader& glshader);
-    void UnbindAttributes(GLContext::GLShader& glshader);
-    void BindTextures2D(GLContext::GLShader& glshader);
-    void UnbindTextures2D(GLContext::GLShader& glshader);
-
     inline void RenderSkybox(Canvas3D* canvas);
 
     Core::ProcessEventArg arg;
@@ -108,9 +102,6 @@ public:
     void Render(Canvas3D* canvas);
     void Render(CompositeCanvas* canvas);
     // void Render(Shader* shader, Canvas3D* canvas = NULL);
-
-    GLuint Apply(Shader* shader);
-    void Release(Shader* shader);
 
     void Handle(Core::InitializeEventArg arg);
     void Handle(Core::DeinitializeEventArg arg);

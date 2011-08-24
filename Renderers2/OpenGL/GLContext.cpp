@@ -756,6 +756,7 @@ void GLContext::ReleaseShaders() {
         glDeleteProgram(it->second.id);
     }
     shaders.clear();
+    uniformQueue.clear();
 }
 
 void GLContext::Handle(Shader::ChangedEventArg arg) {
@@ -834,17 +835,93 @@ void GLContext::Handle(IDataBlockChangedEventArg arg) {
         bo->Unload();
 }
 
-void GLContext::FlushUniforms(Shader* shader) {
+void GLContext::FlushUniforms(Shader* shader, GLContext::GLShader& glshader) {
     map<Shader*, set<Uniform*> >::iterator it = uniformQueue.find(shader);
     if (it == uniformQueue.end()) return;
     set<Uniform*> uniforms = it->second;
-    GLContext::GLShader glshader = LookupShader(shader);
     for (set<Uniform*>::iterator it = uniforms.begin();
          it != uniforms.end(); 
          ++it) {
         BindUniform(**it, glshader.uniforms[*it]);
     }
     uniformQueue.erase(it);
+}
+
+// Bind/unbind (gl state) routines
+
+void GLContext::BindAttributes(GLContext::GLShader& glshader) {
+    vector<pair<Box<IDataBlockPtr>*, GLint> >::iterator it = glshader.attributes.begin();
+    for (; it != glshader.attributes.end(); ++it) {
+        GLint loc = it->second;
+        IDataBlock* db = it->first->Get().get();
+        if (VBOSupport()) {
+            glBindBuffer(GL_ARRAY_BUFFER, LookupVBO(db));
+            glEnableVertexAttribArray(loc);
+            glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, 0);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+        }
+        else {
+            glEnableVertexAttribArray(loc);
+            IDataBlock* db = it->first->Get().get();
+            glVertexAttribPointer(loc, db->GetDimension(), db->GetType(), 0, 0, db->GetVoidData());
+        }
+        CHECK_FOR_GL_ERROR();
+    }
+}
+
+void GLContext::UnbindAttributes(GLContext::GLShader& glshader) {
+    for (unsigned int i = 0; i < glshader.attributes.size(); ++i) {
+        glDisableVertexAttribArray(i);
+        CHECK_FOR_GL_ERROR();
+    }
+}
+
+void GLContext::BindTextures2D(GLContext::GLShader& glshader) {
+    GLuint texUnit = 0;
+    for (; texUnit < glshader.textures.size(); ++texUnit) {
+        glActiveTexture(GL_TEXTURE0 + texUnit);
+        glBindTexture(GL_TEXTURE_2D, LookupTexture(glshader.textures[texUnit].first->Get().get()));
+        CHECK_FOR_GL_ERROR();
+    }
+    texUnit = glshader.textures.size();
+    for (unsigned int i = 0; i < glshader.cubemaps.size(); ++i) {
+        glActiveTexture(GL_TEXTURE0 + texUnit);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, LookupCubemap(glshader.cubemaps[i].first->Get().get()));
+        CHECK_FOR_GL_ERROR();
+        ++texUnit;
+    }
+}
+
+void GLContext::UnbindTextures2D(GLContext::GLShader& glshader) {
+    GLint texUnit = 0;
+    for (unsigned int i = 0; i < glshader.textures.size(); ++i) {
+        glActiveTexture(GL_TEXTURE0 + texUnit);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        CHECK_FOR_GL_ERROR();
+        ++texUnit;
+    }
+    for (unsigned int i = 0; i < glshader.cubemaps.size(); ++i) {
+        glActiveTexture(GL_TEXTURE0 + texUnit);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+        CHECK_FOR_GL_ERROR();
+        ++texUnit;
+    }
+}
+
+GLuint GLContext::Apply(Shader* shader) {
+    GLContext::GLShader glshader = LookupShader(shader);
+    glUseProgram(glshader.id);
+    FlushUniforms(shader, glshader);
+    BindAttributes(glshader);
+    BindTextures2D(glshader);
+    return glshader.id;
+}
+
+void GLContext::Release(Shader* shader) {
+    GLContext::GLShader glshader = LookupShader(shader);
+    UnbindAttributes(glshader);        
+    UnbindTextures2D(glshader);        
+    glUseProgram(0);
 }
 
 

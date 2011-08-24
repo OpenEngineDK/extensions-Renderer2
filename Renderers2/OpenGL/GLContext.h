@@ -106,6 +106,16 @@ private:
     inline void BindUniform(Uniform& uniform, GLint loc);
     inline GLShader ResolveLocations(GLuint id, Shader* shad);
     inline void SetupTexParameters(ITexture2D* tex);
+
+
+    // inline void BindUniforms(GLContext::GLShader& glshader);
+    inline void FlushUniforms(Shader* shader, GLShader& glshader);
+    inline void BindAttributes(GLContext::GLShader& glshader);
+    inline void UnbindAttributes(GLContext::GLShader& glshader);
+    inline void BindTextures2D(GLContext::GLShader& glshader);
+    inline void UnbindTextures2D(GLContext::GLShader& glshader);
+
+
 public:
     GLContext();
     virtual ~GLContext();
@@ -142,7 +152,9 @@ public:
     void Handle(Texture2DChangedEventArg arg);
     void Handle(IDataBlockChangedEventArg arg);
 
-    void FlushUniforms(Shader* shader);
+    GLuint Apply(Shader* shader);
+    void Release(Shader* shader);
+
 };
 
 } // NS OpenGL

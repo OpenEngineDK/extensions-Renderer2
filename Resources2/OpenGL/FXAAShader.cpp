@@ -94,10 +94,10 @@ void FXAAShader::Handle(RenderingEventArg arg) {
     glDepthMask(GL_FALSE);
     
     //draw quad
-    arg.renderer.Apply(this);
+    ctx->Apply(this);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     CHECK_FOR_GL_ERROR();
-    arg.renderer.Release(this);
+    ctx->Release(this);
 
     glDepthMask(GL_TRUE);
     glEnable(GL_DEPTH_TEST);

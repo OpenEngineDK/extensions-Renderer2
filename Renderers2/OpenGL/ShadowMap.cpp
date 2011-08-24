@@ -124,7 +124,7 @@ void ShadowMap::DepthRenderer::VisitMeshNode(MeshNode* node) {
     unsigned int offset = mesh->GetIndexOffset();
     Geometry::Type type = mesh->GetType();
 
-    renderer->Apply(shader);
+    ctx->Apply(shader);
     
     if (ctx->VBOSupport()) {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ctx->LookupVBO(indices));
@@ -142,7 +142,7 @@ void ShadowMap::DepthRenderer::VisitMeshNode(MeshNode* node) {
     }
     CHECK_FOR_GL_ERROR();
 
-    renderer->Release(shader);
+    ctx->Release(shader);
     
     node->VisitSubNodes(*this);
 }
@@ -219,11 +219,11 @@ void ShadowMap::Handle(RenderingEventArg arg) {
         glDisable(GL_DEPTH_TEST);
         glDepthMask(GL_FALSE);
         // do the quading with the post process shader
-        arg.renderer.Apply(shader.get());
+        ctx->Apply(shader.get());
         CHECK_FOR_GL_ERROR();
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         CHECK_FOR_GL_ERROR();
-        arg.renderer.Release(shader.get());
+        ctx->Release(shader.get());
         CHECK_FOR_GL_ERROR();
         glDepthMask(GL_TRUE);
         glEnable(GL_DEPTH_TEST);

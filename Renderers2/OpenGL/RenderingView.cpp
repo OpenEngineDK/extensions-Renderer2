@@ -206,23 +206,8 @@ void RenderingView::VisitTransformationNode(TransformationNode* node) {
     Matrix<4,4,float> m = node->GetTransformationMatrix();
     Matrix<4,4,float> oldMv = modelViewMatrix;
     modelViewMatrix = m * modelViewMatrix;
-
-#if FIXED_FUNCTION
-    // float f[16];
-    // m.ToArray(f);
-    // glPushMatrix();
-    // glMultMatrixf(f);
-    // CHECK_FOR_GL_ERROR();
-#endif
-
     node->VisitSubNodes(*this);
     CHECK_FOR_GL_ERROR();
-
-#if FIXED_FUNCTION
-    // glPopMatrix();
-    // CHECK_FOR_GL_ERROR();
-#endif
-    
     modelViewMatrix = oldMv;
 }
 
@@ -284,7 +269,7 @@ void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
         shad->SetModelViewMatrix(mvMatrix);
         shad->SetModelViewProjectionMatrix(mvMatrix * projectionMatrix);
 
-        renderer->Apply(shad);
+        ctx->Apply(shad);
         
         if (ctx->VBOSupport()) {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ctx->LookupVBO(indices));
@@ -300,7 +285,7 @@ void RenderingView::RenderMesh(Mesh* mesh, Matrix<4,4,float> mvMatrix) {
                            indices->GetType(),
                            (char*)indices->GetVoidDataPtr() + offset * GLContext::GLTypeSize(indices->GetType()));
         }
-        renderer->Release(shad);
+        ctx->Release(shad);
         
 #if FIXED_FUNCTION
 
